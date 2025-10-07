@@ -1,0 +1,4 @@
+name: minemoji
+version: '1.0-SNAPSHOT'
+main: com.github.cinnamondev.minemoji.Minemoji
+api-version: '1.21'
