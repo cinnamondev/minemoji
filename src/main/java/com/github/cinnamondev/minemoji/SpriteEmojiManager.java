@@ -1,6 +1,8 @@
 package com.github.cinnamondev.minemoji;
 
 import com.google.gson.Gson;
+import github.scarsz.discordsrv.dependencies.commons.collections4.BidiMap;
+import github.scarsz.discordsrv.dependencies.commons.collections4.bidimap.DualHashBidiMap;
 import net.fellbaum.jemoji.Emoji;
 import net.fellbaum.jemoji.EmojiManager;
 import net.kyori.adventure.key.Key;
@@ -8,13 +10,14 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ObjectComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.object.ObjectContents;
+import net.kyori.adventure.text.object.SpriteObjectContents;
+import net.kyori.examination.string.StringExaminer;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FilenameFilter;
-import java.nio.file.Path;
+import java.net.URI;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -25,32 +28,29 @@ public class SpriteEmojiManager {
     // default twemoji is backed by JEmoji;
     Map<Emoji,ObjectComponent> emojiMap;
     Map<String, EmojiSet> customPacks;
-    Map<String,ObjectComponent> customSprites;
+    BidiMap<String,Key> customSprites;
 
     public SpriteEmojiManager(Minemoji p) {
         this.p = p;
         this.emojiMap = createBaseEmojiSet();
 
         this.customPacks = discoverEmojiPacks();
-        this.customSprites = customPacks.entrySet().stream()
+        this.customSprites = new DualHashBidiMap<>(customPacks.entrySet().stream()
                 .flatMap(e ->
                         Arrays.stream(e.getValue().emojis)
                                 .map(meta -> Map.entry(
                                         meta.emojiText,
-                                        meta.toComponent(e.getValue())
+                                        Key.key(meta.resource)
                                 ))
-                ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+        );
 
-        this.customSprites.entrySet().forEach(e -> {
-            p.getLogger().info(e.getKey());
-            p.getLogger().info(e.getValue().toString());
-
-        });
     }
 
     public class EmojiSet {
         public String prefix;
         public int packVersion;
+        public URI url;
         public SpriteMeta[] emojis;
     }
     public class SpriteMeta {
@@ -69,10 +69,15 @@ public class SpriteEmojiManager {
         return Optional.ofNullable(emojiMap.get(emoji));
     }
 
+    public Optional<String> getCustomEmojiBySprite(Key sprite) {
+        return Optional.ofNullable(customSprites.getKey(sprite));
+    }
     public Optional<ObjectComponent> getCustomEmoji(String key) {
-        customSprites.keySet().forEach(customEmoji -> p.getLogger().info(customEmoji));
-        p.getLogger().info(customSprites.get(key).toString());
-        return Optional.ofNullable(customSprites.get(key));
+        return Optional.ofNullable(customSprites.get(key))
+                .map(sprite -> Component.object(ObjectContents.sprite(
+                        Key.key("paintings"),
+                        sprite
+                )));
     }
     public Map<Emoji, ObjectComponent> createBaseEmojiSet() {
         return EmojiManager.getAllEmojis().stream().map(e ->
@@ -118,12 +123,42 @@ public class SpriteEmojiManager {
                         );
             })
             .build();
-    public Component replaceAllPossibleEmotesInComponent(Component component) {
+
+    protected Optional<Emoji> getEmojiBySprite(Key sprite) {
+        // 1f0cf -> &#x1f0cf;
+        // 1f1e6-1f1e8 -> &#x1f1e6;&#x1f1e8;
+        var arr = sprite.value().split("/");
+        String trimmedHexCode = arr[arr.length - 1];
+        String hexCode = Arrays.stream(trimmedHexCode.split("-"))
+                .map(str -> "&#x" + str)
+                .collect(Collectors.joining(";")) + ";";
+        return EmojiManager.getByHtmlHexadecimal(hexCode);
+    }
+    ///  doesnt touch the children. If its an ObjectComponent with a matching sprite key, it will be turned into a
+    ///  TextComponent. if it doesnt have a matching key or otherwise, it is left UNTOUCHED!
+    protected Component demojizeSingleComponent(Component component) {
+        if (component instanceof ObjectComponent o && o.contents() instanceof SpriteObjectContents s) {
+            return getCustomEmojiBySprite(s.sprite()).map(str -> (Component) Component.text(":" + str + ":"))
+                    .orElse(getEmojiBySprite(s.sprite())
+                            .map(e -> e.getDiscordAliases().getFirst())
+                            .map(str -> (Component) Component.text(str))
+                            .orElse(component) // just use the old one
+                    );
+        }
+        return component;
+    }
+
+    public Component demojize(Component component) {
+        var childs = component.children().stream().map(this::demojizeSingleComponent).collect(Collectors.toList());
+        return demojizeSingleComponent(component).children(childs);
+    }
+    public Component emojize(Component component) {
         // try to replace Unicode text emotes
         return component.replaceText(UNICODE_REPLACER)
                 .replaceText(PREFIXED_EMOTE_REPLACER)
                 .replaceText(DEFAULT_EMOTE_REPLACER);
     }
+
     public Optional<EmojiSet> getPackByPrefix(String prefix) {
         return Optional.ofNullable(customPacks.get(prefix));
     }
