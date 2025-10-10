@@ -1,2 +1,7 @@
 unicode-emojis:
+  enabled: true # default option, set to false to disable default emojis...
   uri: "https://cinnamondev.github.io/minemoji/packs/twemoji/latest.zip"
+
+enforce-pack: true
+# use minimessage!  :) remove entry to disable prompt
+join-prompt: "This server uses resource pack to allow players to use emotes in gamechat :) <click:open_url:'https://github.com/cinnamondev/minemoji'><u><b><aqua>About</aqua></b></u></click>"

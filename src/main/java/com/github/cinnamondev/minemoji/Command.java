@@ -1,29 +1,76 @@
 package com.github.cinnamondev.minemoji;
 
+import com.google.common.collect.Lists;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import github.scarsz.discordsrv.api.events.DiscordGuildMessagePreBroadcastEvent;
-import github.scarsz.discordsrv.api.events.DiscordGuildMessagePreProcessEvent;
-import github.scarsz.discordsrv.api.events.DiscordGuildMessageReceivedEvent;
-import github.scarsz.discordsrv.api.events.DiscordGuildMessageSentEvent;
-import github.scarsz.discordsrv.dependencies.mcdiscordreserializer.discord.DiscordSerializer;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.ObjectComponent;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+
+import java.util.List;
+
 
 public class Command {
-    public static LiteralCommandNode<CommandSourceStack> COMMAND = Commands.literal("minemoji")
+    private final SpriteEmojiManager manager;
+    private final Minemoji p;
+    public Command(Minemoji p) {
+        this.p = p;
+        this.manager = p.emojiManager;
+    }
+
+    private final LiteralCommandNode<CommandSourceStack> COMMAND = Commands.literal("minemoji")
             .then(Commands.literal("list")
-                    .then(Commands.argument("pack", StringArgumentType.word()))
-                    .then(Commands.literal("normal"))
+                    .then(Commands.argument("pack", StringArgumentType.word())
+                            .executes(ctx -> listByPack(ctx, false)))
+                    .then(Commands.literal("normal")
+                            .executes(ctx -> listByPack(ctx, true)))
             )
             .then(Commands.literal("help"))
             .executes(Command::helpCommand)
             .build();
 
+    private Component emoteWithLore(ObjectComponent component, String knownString) {
+        return component
+                .hoverEvent(HoverEvent.showText(
+                        Component.text(knownString)
+                                .appendNewline()
+                                .append(Component.text("Click to copy to clipboard!"))
+                ))
+                .clickEvent(ClickEvent.copyToClipboard(knownString));
+    }
+    private static Component formatEmotes(List<Component> components, int columns) {
+        return Component.join(JoinConfiguration.newlines(),
+                Lists.partition(components, columns).stream()
+                        .map(cs -> Component.join(JoinConfiguration.separator(Component.text(" ")), cs))
+                        .toList()
+        );
+    }
 
-    private static int listByPack(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    private int listByPack(CommandContext<CommandSourceStack> context, boolean defaultPack) throws CommandSyntaxException {
+        List<Component> list;
+        if (defaultPack) {
+            list = manager.getDefaultEmojiMap().entrySet().stream()
+                    .map(e -> emoteWithLore(e.getValue(),e.getKey().getDiscordAliases().getFirst()))
+                    .toList();
+        } else {
+            list = manager.getPackByPrefix(context.getArgument("pack", String.class)).stream()
+                    .flatMap(p -> p.emojis.stream()
+                            .map(m -> emoteWithLore(m.toComponent(p), ":" + m.emojiText + ":"))
+                    ).toList();
+        }
+
+        if (list.isEmpty()) {
+            context.getSource().getSender().sendMessage(Component.text("No pack found!"));
+            return 1;
+        }
+
+        context.getSource().getSender().sendMessage(formatEmotes(list, 10));
         return 1;
     }
     private static int helpCommand(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {

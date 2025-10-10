@@ -11,33 +11,37 @@ import net.kyori.adventure.text.ObjectComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.object.ObjectContents;
 import net.kyori.adventure.text.object.SpriteObjectContents;
-import net.kyori.examination.string.StringExaminer;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.net.URI;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class SpriteEmojiManager {
-    private Minemoji p;
+    private final Minemoji p;
 
     // default twemoji is backed by JEmoji;
-    Map<Emoji,ObjectComponent> emojiMap;
+    private boolean IS_BASE_EMOJIS_AVAILABLE = false;
+    public boolean baseEmojisAvailable() { return IS_BASE_EMOJIS_AVAILABLE; }
+
+    private final Map<Emoji,ObjectComponent> emojiMap;
     Map<String, EmojiSet> customPacks;
     BidiMap<String,Key> customSprites;
 
     public SpriteEmojiManager(Minemoji p) {
         this.p = p;
-        this.emojiMap = createBaseEmojiSet();
+        if (p.getConfig().getBoolean("unicode-emojis.enabled", true)) {
+            this.emojiMap = createBaseEmojiSet();
+            if (!emojiMap.isEmpty()) { IS_BASE_EMOJIS_AVAILABLE = true; }
+        } else { this.emojiMap = Collections.emptyMap(); }
 
         this.customPacks = discoverEmojiPacks();
         this.customSprites = new DualHashBidiMap<>(customPacks.entrySet().stream()
                 .flatMap(e ->
-                        Arrays.stream(e.getValue().emojis)
+                        e.getValue().emojis.stream()
                                 .map(meta -> Map.entry(
                                         meta.emojiText,
                                         Key.key(meta.resource)
@@ -47,24 +51,9 @@ public class SpriteEmojiManager {
 
     }
 
-    public class EmojiSet {
-        public String prefix;
-        public int packVersion;
-        public URI url;
-        public SpriteMeta[] emojis;
-    }
-    public class SpriteMeta {
-        public String emojiText;
-        public String resource;
-        //public String[] aliases;
+    public Map<Emoji,ObjectComponent> getDefaultEmojiMap() { return Collections.unmodifiableMap(emojiMap); }
 
-        public ObjectComponent toComponent(EmojiSet context) {
-            return Component.object(ObjectContents.sprite(
-                    Key.key("paintings"),
-                    Key.key(resource)
-            ));
-        }
-    }
+
     public Optional<ObjectComponent> getEmojiFromActual(Emoji emoji) {
         return Optional.ofNullable(emojiMap.get(emoji));
     }
@@ -83,7 +72,7 @@ public class SpriteEmojiManager {
         return EmojiManager.getAllEmojis().stream().map(e ->
                 Map.entry(e, Component.object(ObjectContents.sprite(
                         Key.key("paintings"),
-                        Key.key("twemoji/" + StringUtils.joinWith("-", e.getHtmlHexadecimalCode().replace("&#x", "").split(";")).toLowerCase())
+                        Key.key("unicode/" + StringUtils.joinWith("-", e.getHtmlHexadecimalCode().replace("&#x", "").split(";")).toLowerCase())
                 )))
         ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
@@ -159,7 +148,7 @@ public class SpriteEmojiManager {
                 .replaceText(DEFAULT_EMOTE_REPLACER);
     }
 
-    public Optional<EmojiSet> getPackByPrefix(String prefix) {
+    protected Optional<EmojiSet> getPackByPrefix(String prefix) {
         return Optional.ofNullable(customPacks.get(prefix));
     }
     public Optional<ObjectComponent> getNamespacedCustomEmoji(String identifier) {
@@ -169,13 +158,13 @@ public class SpriteEmojiManager {
         String packIdentifier = _arr[0];
         String spriteName = _arr[1];
         return getPackByPrefix(packIdentifier)
-                .flatMap(set -> Arrays.stream(set.emojis)
+                .flatMap(set -> set.emojis.stream()
                         .filter(emote -> emote.emojiText.equalsIgnoreCase(spriteName))
                         .findFirst()
                          .map(meta -> meta.toComponent(set))
                 );
     }
-    public Map<String, EmojiSet> discoverEmojiPacks() {
+    private Map<String, EmojiSet> discoverEmojiPacks() {
         HashMap<String, EmojiSet> map = new HashMap<>();
         Gson gson = new Gson();
         File packsDirectory = p.getDataPath().resolve("packs/").toFile();
@@ -195,7 +184,7 @@ public class SpriteEmojiManager {
             try {
                 FileReader reader = new FileReader(pack);
                 EmojiSet set = gson.fromJson(reader, EmojiSet.class);
-                for (SpriteMeta emoji : set.emojis) {
+                for (EmojiSet.SpriteMeta emoji : set.emojis) {
                     emoji.emojiText = emoji.emojiText.toLowerCase().strip();
                 }
                 map.put(set.prefix, set);
