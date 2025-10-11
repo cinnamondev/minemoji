@@ -1,10 +1,8 @@
 # User-specific stuff
 .idea/
 
-pack_maker/.venv
-pack_maker/pack_output
-pack_maker/twemoji_pack
-testserver
+sample_pack/output-directory/
+testserver/
 
 *.iml
 *.ipr

@@ -16,6 +16,8 @@ import org.apache.logging.log4j.Logger;
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
+import javax.imageio.metadata.IIOMetadata;
+import javax.imageio.metadata.IIOMetadataNode;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -29,6 +31,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 
 ///  half finished resource pack generator
@@ -63,6 +68,11 @@ public class PackMaker {
         formatMaxVersion.setType(Number.class);
         cliOptions.addOption(formatMaxVersion);
 
+        var emoteKeyWidth = new Option("w", "width", true, "width of emote key");
+        emoteKeyWidth.setRequired(false);
+        emoteKeyWidth.setType(Number.class);
+        cliOptions.addOption(emoteKeyWidth);
+
         var packgen = new Option("s", "skip-packgen", false, "skips generation of .json file");
         packgen.setRequired(false);
         cliOptions.addOption(packgen);
@@ -70,7 +80,8 @@ public class PackMaker {
         cliOptions.addOption("a", "atlas", true, "atlas key used. not rec to change.");
         cliOptions.addOption("v", "verbose", false, "verbose");
     }
-    protected record CLIArgs(File inputDirectory, File outputDirectory, URL packUrl, String prefix, Key atlas, boolean createPackInfo, boolean verbose, int maxVersion) {
+    protected record CLIArgs(File inputDirectory, File outputDirectory, URL packUrl, String prefix,
+                             Key atlas, boolean createPackInfo, boolean verbose, int maxVersion, int keyWidth) {
         public static CLIArgs fromOpts(String[] args) throws ParseException {
             CommandLineParser parser = new DefaultParser();
             CommandLine commandLine = parser.parse(cliOptions, args);
@@ -85,7 +96,10 @@ public class PackMaker {
                     commandLine.hasOption("verbose"),
                     commandLine.hasOption("max-version")
                             ? ((Number)commandLine.getParsedOptionValue("max-version")).intValue()
-                            : MAX_RP_VERSION
+                            : MAX_RP_VERSION,
+                    commandLine.hasOption("width")
+                            ? ((Number) commandLine.getParsedOptionValue("width")).intValue()
+                            : 32
             );
         }
     }
@@ -124,6 +138,7 @@ public class PackMaker {
     }
 
     protected static int getFramerateOrDefault(@Nullable File infoFile) throws IOException {
+        if (!infoFile.exists()) { return DEFAULT_FRAMERATE; }
         try (BufferedReader bw = new BufferedReader(new FileReader(infoFile))) {
             String unparsedLine = bw.readLine();
             if (NumberUtils.isCreatable(unparsedLine)) {
@@ -140,8 +155,8 @@ public class PackMaker {
     ///  transcodes and saves SVGs using args specified.
     public static void processSvg(CLIArgs args, File file, File outFile) throws IOException, TranscoderException {
         PNGTranscoder t = new PNGTranscoder();
-        t.addTranscodingHint(PNGTranscoder.KEY_WIDTH, 32.0f);
-        t.addTranscodingHint(PNGTranscoder.KEY_HEIGHT, 32.0f);
+        t.addTranscodingHint(PNGTranscoder.KEY_WIDTH, (float) args.keyWidth);
+        t.addTranscodingHint(PNGTranscoder.KEY_HEIGHT, (float) args.keyWidth);
         TranscoderInput input = new TranscoderInput(new FileInputStream(file));
 
         OutputStream out = new FileOutputStream(outFile);
@@ -152,32 +167,111 @@ public class PackMaker {
         out.close();
     }
 
-    protected static void processGif(CLIArgs args, ImageReader gifReader, File file, File outFile) throws IOException {
-        int framerate = getFramerateOrDefault(resolveInfoFile(file));
+    ///  [from stackoverflow :)](https://stackoverflow.com/questions/20077913/read-delay-between-frames-in-animated-gif)
+    private static IIOMetadataNode getNode(IIOMetadataNode rootNode, String nodeName) {
+        int nNodes = rootNode.getLength();
+        for (int i = 0; i < nNodes; i++) {
+            if (rootNode.item(i).getNodeName().compareToIgnoreCase(nodeName)== 0) {
+                return((IIOMetadataNode) rootNode.item(i));
+            }
+        }
+        IIOMetadataNode node = new IIOMetadataNode(nodeName);
+        rootNode.appendChild(node);
+        return(node);
+    }
 
+    protected static int getDelayTimeFromCurrentStream(ImageReader gifReader, int frame) throws IOException {
+        //if (frame == 0) { return -1; }
+        IIOMetadata meta = gifReader.getImageMetadata(frame);
+        String formatName = meta.getNativeMetadataFormatName();
+        IIOMetadataNode root = (IIOMetadataNode) meta.getAsTree(formatName);
+        IIOMetadataNode graphicsController = getNode(root, "GraphicControlExtension");
+        String unparsedTime = graphicsController.getAttribute("delayTime");
+
+        return Integer.parseInt(unparsedTime);
+    }
+
+    protected static int modeOfList(List<Integer> list) {
+        if (list == null || list.isEmpty()) { throw new IllegalArgumentException("list is empty"); }
+        return list.stream()
+                .filter(f -> f != -1)
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                .entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElseThrow();
+    }
+
+    protected static void processGif(CLIArgs args, ImageReader gifReader, File file, File outFile, File mcmetaFile) throws IOException {
+        int maxFramerate = getFramerateOrDefault(resolveInfoFile(file));
+        if (maxFramerate > 20) { maxFramerate = 20; } // framerate is capped by the game! 20 fps -> 1 fpt
+
+        ArrayList<Integer> frameTimes =  new ArrayList<>(); // the most common entry will be turned into frameTime.
         ImageInputStream stream = ImageIO.createImageInputStream(file);
         gifReader.setInput(stream);
+
         int n = gifReader.getNumImages(true);
-        BufferedImage output = new BufferedImage(32,32*n, BufferedImage.TYPE_INT_RGB);
+        BufferedImage output = new BufferedImage(args.keyWidth,args.keyWidth*n, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = output.createGraphics();
+        g2d.setBackground(new Color(0,0,0,1f));
         for (int i = 0; i < n; i++) {
             BufferedImage frame = gifReader.read(i);
-            var newFrame = frame.getScaledInstance(32, 32, Image.SCALE_DEFAULT);
-            g2d.drawImage(newFrame, 0, 32*i, null);
+            var newFrame = frame.getScaledInstance(args.keyWidth, args.keyWidth, Image.SCALE_SMOOTH);
+            g2d.drawImage(newFrame, 0, args.keyWidth*i, null);
+
+            frameTimes.add(getDelayTimeFromCurrentStream(gifReader, i));
         }
         g2d.dispose();
         ImageIO.write(output, "png", outFile);
+
+        // make the texture .mcmeta, most common delay will be the 'frame time'
+        // and delays too short will be increased to maintain the max framerate.
+        int mode = modeOfList(frameTimes);
+        int minDelay = (10000 / maxFramerate);  // hundreths of a second. at 20 fps it should be '5'
+        int minDelayTicks = minDelay / 5; // at 20 fps it should be '1'
+        ArrayList<String> frames = new ArrayList<>(frameTimes.size());
+        boolean hasNonStandardFrames = false;
+        for (int i = 0; i < frameTimes.size(); i++) {
+            int currentFrame = frameTimes.get(i);
+            String frameOutput;
+            if (currentFrame == mode || currentFrame == -1) {
+                frameOutput = String.valueOf(currentFrame);
+            } else {
+                hasNonStandardFrames = true;
+                int currentFrameTicks;
+                if (currentFrame < minDelayTicks) {
+                    currentFrameTicks = minDelayTicks;
+                } else {
+                    currentFrameTicks = currentFrame / 5;
+                }
+                frameOutput = "{\"index\": " + i +",\"time\":"+ currentFrameTicks +"}";
+            }
+            frames.add(frameOutput);
+        }
+
+
+        // TODO writer with frametime do when home!!
+        if (!mcmetaFile.exists()) { mcmetaFile.createNewFile(); }
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(mcmetaFile))) {
+            bw.write("{\"animation\": {\"frametime\":" + (mode/5) +
+                    (hasNonStandardFrames // we only add the array we made if we have different frame delays.
+                            ? ",\"frames\": [" + String.join(",", frames) +"]"
+                            : ""
+                    ) + "}}");
+        }
+
+        stream.close();
     }
 
     protected static void genericTranscodeResize(CLIArgs args, File file, File outFile) throws IOException {
-        try (ImageInputStream s = ImageIO.createImageInputStream(file)) {
-            BufferedImage image = ImageIO.read(s);
-            BufferedImage newImage = new BufferedImage(32,32, BufferedImage.TYPE_INT_RGB);
-            Graphics2D g2d = newImage.createGraphics();
-            g2d.drawImage(image, 0, 0, null);
-            g2d.dispose();
-            ImageIO.write(newImage, "png", outFile);
-        }
+        ImageInputStream s = ImageIO.createImageInputStream(file);
+        BufferedImage image = ImageIO.read(s);
+        Image scaledImage = image.getScaledInstance(args.keyWidth, args.keyWidth, Image.SCALE_SMOOTH);
+        BufferedImage newImage = new BufferedImage(args.keyWidth, args.keyWidth, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = newImage.createGraphics();
+        g2d.drawImage(scaledImage, 0, 0, null);
+        g2d.dispose();
+        ImageIO.write(newImage, "png", outFile);
     }
 
     protected static String filenameToUsableSpriteName(String filename) { // low effort
@@ -230,7 +324,7 @@ public class PackMaker {
             File outputFile = texturesFolder(args).resolve(baseString + ".png").toFile();
             switch (fileEnding) {
                 case "svg" -> processSvg(args, file, outputFile);
-                case "gif" -> processGif(args, gifReader, file, outputFile);
+                case "gif" -> processGif(args, gifReader, file, outputFile, texturesFolder(args).resolve(baseString + ".png.mcmeta").toFile());
                 default -> {
                     if (endings.contains(fileEnding)) {
                         genericTranscodeResize(args, file, outputFile);

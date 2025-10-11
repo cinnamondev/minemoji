@@ -1,3 +1,3 @@
-[submodule "pack_maker/twemoji"]
-	path = pack_maker/twemoji
+[submodule "twemoji"]
+	path = twemoji
 	url = git@github.com:jdecked/twemoji.git
