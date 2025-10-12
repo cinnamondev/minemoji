@@ -8,6 +8,7 @@ import java.net.URISyntaxException;
 
 public final class Minemoji extends JavaPlugin {
     private static final URI DEFAULT_URI = URI.create("https://cinnamondev.github.io/minemoji/latest.zip");
+    private static boolean DO_DISCORD_SRV = false;
     public DiscordIntegration discord = null;
     public SpriteEmojiManager emojiManager;
     @Override
@@ -16,8 +17,10 @@ public final class Minemoji extends JavaPlugin {
         // Plugin startup logic
         this.emojiManager = new SpriteEmojiManager(this);
         try {
-            RequestPacks.requestPacks(this, emojiManager).thenAccept(listener -> getServer().getPluginManager()
-                    .registerEvents(listener, this));
+            if (getConfig().getBoolean("serve-packs", true)) {
+                RequestPacks.requestPacks(this, emojiManager).thenAccept(listener -> getServer().getPluginManager()
+                        .registerEvents(listener, this));
+            }
         } catch (URISyntaxException e) {
             getLogger().warning(e.getMessage());
             getLogger().warning("malformed uri for resource pack, there may be issues serving resource packs now.");
@@ -25,6 +28,7 @@ public final class Minemoji extends JavaPlugin {
 
 
         if (getServer().getPluginManager().isPluginEnabled("DiscordSRV")) {
+            DO_DISCORD_SRV = true;
             discord = new DiscordIntegration(emojiManager);
             DiscordSRV.api.subscribe(discord);
         }
@@ -33,7 +37,9 @@ public final class Minemoji extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        DiscordSRV.api.unsubscribe(discord);
+        if (DO_DISCORD_SRV) {
+            DiscordSRV.api.unsubscribe(discord);
+        }
         // Plugin shutdown logic
     }
 }

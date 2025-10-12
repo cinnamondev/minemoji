@@ -1,6 +1,7 @@
 package com.github.cinnamondev.minemoji.PackMaker;
 
 import com.github.cinnamondev.minemoji.EmojiSet;
+import com.github.cinnamondev.minemoji.Minemoji;
 import com.google.gson.Gson;
 import net.kyori.adventure.key.Key;
 import org.apache.batik.transcoder.TranscoderException;
@@ -114,8 +115,8 @@ public class PackMaker {
         }
     }
 
-    protected static int MIN_RP_VERSION = 1;
-    protected static int MAX_RP_VERSION = 2;
+    protected static int MIN_RP_VERSION = 69;
+    protected static int MAX_RP_VERSION = 69;
     protected static int DEFAULT_FRAMERATE = 5;
 
     protected static void generatePackMCMeta(CLIArgs args) throws IOException {
@@ -125,7 +126,7 @@ public class PackMaker {
             file.createNewFile();
         }
         BufferedWriter bw = new BufferedWriter(new FileWriter(file, false));
-        bw.write("{\"pack\": {\"description\": \"Minemoji Emoji Pack\", \"min_format\": 69, \"max_format\":" + args.maxVersion + "}}");
+        bw.write("{\"pack\": {\"description\": \"Minemoji Emoji Pack\",\"min_format\":" + MIN_RP_VERSION  +",\"max_format\":" + args.maxVersion + "}}");
         bw.close();
     }
     protected static Path texturesFolder(CLIArgs args) throws IOException {

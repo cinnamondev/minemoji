@@ -1,8 +1,6 @@
 package com.github.cinnamondev.minemoji;
 
 import com.google.gson.Gson;
-import github.scarsz.discordsrv.dependencies.commons.collections4.BidiMap;
-import github.scarsz.discordsrv.dependencies.commons.collections4.bidimap.DualHashBidiMap;
 import net.fellbaum.jemoji.Emoji;
 import net.fellbaum.jemoji.EmojiManager;
 import net.kyori.adventure.key.Key;
@@ -11,6 +9,8 @@ import net.kyori.adventure.text.ObjectComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.object.ObjectContents;
 import net.kyori.adventure.text.object.SpriteObjectContents;
+import org.apache.commons.collections4.BidiMap;
+import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
@@ -91,7 +91,7 @@ public class SpriteEmojiManager {
     ///  Text replacer that replaces prefixed emotes :identifier--sprite: with their corresponding emoji
     ///  (has to search rather than map lookup)
     private final TextReplacementConfig PREFIXED_EMOTE_REPLACER = TextReplacementConfig.builder()
-            .match(Pattern.compile(":([a-zA-Z0-9_]*--[a-zA-Z0-9_]*):"))
+            .match(Pattern.compile(":([a-zA-Z0-9_-]*--[a-zA-Z0-9_-]*):"))
             .replacement((result, b) ->
                     getNamespacedCustomEmoji(result.group().trim().toLowerCase()).map(c -> (Component) c)
                         .orElse(Component.text(result.group()))
@@ -101,7 +101,7 @@ public class SpriteEmojiManager {
     ///  As per how the alias and sprite lookups are, if there is a conflict of names, whichever came in last
     ///  gets the spot. Default emotes should override all emotes.
     private final TextReplacementConfig DEFAULT_EMOTE_REPLACER = TextReplacementConfig.builder()
-            .match(":([a-zA-Z0-9_]*):")
+            .match(":([a-zA-Z0-9_-]*):")
             .replacement((result, b) -> {
                 String match = result.group(1).toLowerCase().trim();
                 return getCustomEmoji(match).map(c -> (Component) c)
