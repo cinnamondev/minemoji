@@ -7,7 +7,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 public final class Minemoji extends JavaPlugin {
-    private static final URI DEFAULT_URI = URI.create("https://cinnamondev.github.io/minemoji/latest.zip");
+    public static final URI DEFAULT_URI = URI.create("https://cinnamondev.github.io/minemoji/latest.zip");
     private static boolean DO_DISCORD_SRV = false;
     public DiscordIntegration discord = null;
     public SpriteEmojiManager emojiManager;

@@ -20,9 +20,6 @@ import java.util.stream.Collectors;
 
 public class RequestPacks implements Listener {
     public static CompletableFuture<RequestPacks> requestPacks(Minemoji p, SpriteEmojiManager emojiManager) throws URISyntaxException {
-        // ew bwaah
-        CompletableFuture<ResourcePackInfo> future = new CompletableFuture<>();
-
         ArrayList<CompletableFuture<ResourcePackInfo>> futures =
                 emojiManager.customPacks.values().parallelStream()
                         .map(e -> ResourcePackInfo.resourcePackInfo()
@@ -33,14 +30,14 @@ public class RequestPacks implements Listener {
 
         if (p.getConfig().getBoolean("unicode-emojis.enabled", true)) {
             String defaultPack = p.getConfig().getString("unicode-emojis.uri");
-            if (defaultPack != null && !defaultPack.isEmpty()) {
-                futures.add(
-                        ResourcePackInfo.resourcePackInfo()
-                                .uri(new URI(defaultPack))
-                                .id(UUID.fromString("unicode-emojis"))
-                                .computeHashAndBuild()
-                );
-            }
+            URI uri;
+            if (defaultPack == null) { uri = Minemoji.DEFAULT_URI; } else { uri = new URI(defaultPack); }
+            futures.add(
+                    ResourcePackInfo.resourcePackInfo()
+                            .uri(uri)
+                            .id(UUID.fromString("unicode-emojis"))
+                            .computeHashAndBuild()
+            );
         }
 
         if (futures.isEmpty()) {
