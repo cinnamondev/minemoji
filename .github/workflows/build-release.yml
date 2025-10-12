@@ -2,6 +2,8 @@ on:
   push:
     branches: master
     tags: 'v*'
+  workflow_dispatch:
+
 
 jobs:
     setup-java:
@@ -22,3 +24,4 @@ jobs:
           uses: softprops/action-gh-release@v2
           with:
             files: target/minemoji-*.jar
+    

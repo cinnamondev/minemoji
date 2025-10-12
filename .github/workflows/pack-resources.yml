@@ -1,0 +1,56 @@
+on:
+  push:
+    branches: master
+    tags: 't*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+    deploy-pages:
+        name: Deploy pages
+        runs-on: ubuntu-latest
+        steps:
+        - name: Checkout submodules
+          uses: actions/checkout@v5
+          with:
+            submodules: true
+        - name: Download latest release
+          uses: robinraju/release-downloader@v1
+          with:
+            latest: true
+            fileName: 'minemoji-*.jar'
+            tarBall: false
+            zipBall: false
+        - uses: actions/setup-java@v5
+          with:
+            distribution: 'temurin' # See 'Supported distributions' for available options
+            java-version: '21'
+        - run: >
+            java -cp minemoji-*.jar com.github.cinnamondev.minemoji.PackMaker.PackMaker 
+            --input-directory ./sample_pack/input-directory
+            --output-directory ./site/packs/minemoji-latest
+            --prefix minemoji
+            --pack-url https://cinnamondev.github.io/minemoji/packs/minemoji-latest.zip
+            --zip-pack --delete-directory
+        - run: >
+            java -cp minemoji-*.jar com.github.cinnamondev.minemoji.PackMaker.PackMaker 
+            --input-directory ./twemoji/assets/svg/
+            --output-directory ./site/packs/twemoji-latest
+            --prefix emotes
+            --skip-packgen
+            --pack-url https://cinnamondev.github.io/minemoji/packs/twemoji-latest.zip
+            --zip-pack --delete-directory
+        - name: Setup Pages
+          uses: actions/configure-pages@v5
+        - name: Upload artifacts
+          uses: actions/upload-pages-artifact@v3
+          with:
+            path: './site/'
+        - name: Deploy to github pages
+          id: deployment
+          uses: actions/deploy-pages@v4
+        
