@@ -28,12 +28,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 
 ///  half finished resource pack generator
@@ -49,7 +49,7 @@ public class PackMaker {
         inDir.setType(File.class);
         cliOptions.addOption(inDir);
 
-        var outDir = new Option("o", "output-directory",  true, "resource pack root");
+        var outDir = new Option("o", "output-directory",  true, "resource pack root. if this is zipped, the filename will be this + .zip.");
         outDir.setRequired(true);
         outDir.setType(File.class);
         cliOptions.addOption(outDir);
@@ -77,11 +77,19 @@ public class PackMaker {
         packgen.setRequired(false);
         cliOptions.addOption(packgen);
 
+        var createZip = new Option("z", "zip-pack", false, "zips up back");
+        packgen.setRequired(false);
+        cliOptions.addOption(createZip);
+
+        var zipDeleteDirectory = new Option("d", "delete-directory", false, "delete directory");
+        zipDeleteDirectory.setRequired(false);
+        cliOptions.addOption(zipDeleteDirectory);
+
         cliOptions.addOption("a", "atlas", true, "atlas key used. not rec to change.");
         cliOptions.addOption("v", "verbose", false, "verbose");
     }
     protected record CLIArgs(File inputDirectory, File outputDirectory, URL packUrl, String prefix,
-                             Key atlas, boolean createPackInfo, boolean verbose, int maxVersion, int keyWidth) {
+                             Key atlas, boolean createPackInfo, boolean verbose, int maxVersion, int keyWidth, boolean createZip, boolean deleteDirectory) {
         public static CLIArgs fromOpts(String[] args) throws ParseException {
             CommandLineParser parser = new DefaultParser();
             CommandLine commandLine = parser.parse(cliOptions, args);
@@ -99,7 +107,9 @@ public class PackMaker {
                             : MAX_RP_VERSION,
                     commandLine.hasOption("width")
                             ? ((Number) commandLine.getParsedOptionValue("width")).intValue()
-                            : 32
+                            : 32,
+                    commandLine.hasOption("zip-pack"),
+                    commandLine.hasOption("delete-directory") && commandLine.hasOption("zip-pack")
             );
         }
     }
@@ -274,10 +284,33 @@ public class PackMaker {
         ImageIO.write(newImage, "png", outFile);
     }
 
-    protected static String filenameToUsableSpriteName(String filename) { // low effort
-        String base = filename.substring(0, filename.lastIndexOf('.') + 1);
-        return base.replace('.', '-');
+    /// https://stackoverflow.com/a/32052016
+    public static void zipFiles(File sourceFolder, File zipFile) throws IOException {
+        if (!sourceFolder.exists()) { throw new IllegalArgumentException("source doesnt exist"); }
+        if (!sourceFolder.isDirectory()) { throw new IllegalArgumentException("source is not a directory :("); }
+
+        if (zipFile.exists()) { zipFile.delete(); }
+        zipFile.createNewFile();
+        try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFile))) {
+            Files.walk(sourceFolder.toPath())
+                    .filter(p -> p.toFile().isFile()) // only files
+                    .forEach(p -> {
+                        ZipEntry ze = new ZipEntry(sourceFolder.toPath().relativize(p).toString());
+                        try {
+                            out.putNextEntry(ze);
+                            Files.copy(zipFile.toPath(), out);
+                            out.closeEntry();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+        }
     }
+
+    public static void deleteDirectory(File directory) throws IOException {
+        Files.walk(directory.toPath()).sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
+    }
+
     public static void main(String[] __args) throws ParseException, URISyntaxException, IOException, TranscoderException {
         var args = CLIArgs.fromOpts(__args);
         if (args.verbose) { LOG.atLevel(Level.ALL); } else { LOG.atLevel(Level.WARN); }
@@ -307,7 +340,7 @@ public class PackMaker {
             set.packVersion = 1;
             set.url = args.packUrl.toURI();
         }
-
+        System.out.println(set.prefix);
 
         if (!args.outputDirectory.exists()) { args.outputDirectory.mkdirs(); }
         if (!args.inputDirectory.isDirectory() || !args.outputDirectory.isDirectory()) {
@@ -331,17 +364,20 @@ public class PackMaker {
                     }
                 }
             }
+
+            String spriteName = baseString.replace('.', '-');
             if (args.createPackInfo) {
                 emojis.add(new EmojiSet.SpriteMeta(
-                        filenameToUsableSpriteName(baseString),
-                        filenameToUsableSpriteName(baseString)
+                        spriteName,
+                        args.prefix + "/" + spriteName
                 ));
             }
         }
 
         set.emojis = emojis;
-        if (!jsonFile.exists()) { jsonFile.createNewFile(); }
         if (args.createPackInfo) {
+            if (!jsonFile.exists()) { jsonFile.createNewFile(); }
+            set.emojis = emojis;
             try (BufferedWriter bw = new BufferedWriter(new FileWriter(jsonFile, false))) {
                 gson.toJson(set, bw);
             }
@@ -350,5 +386,14 @@ public class PackMaker {
 
         generateAtlas(args);
         generatePackMCMeta(args);
+
+        if (args.createZip) {
+            String zipName = args.outputDirectory.getName() + ".zip";
+            zipFiles(args.outputDirectory, args.outputDirectory.getParentFile().toPath().resolve(zipName).toFile());
+        }
+
+        if (args.deleteDirectory && args.outputDirectory.exists()) {
+            deleteDirectory(args.outputDirectory);
+        }
     }
 }

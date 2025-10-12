@@ -3,6 +3,7 @@
 
 sample_pack/output-directory/
 testserver/
+*.zip
 
 *.iml
 *.ipr
