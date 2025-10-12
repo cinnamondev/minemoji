@@ -1,6 +1,6 @@
 unicode-emojis:
   enabled: true # default option, set to false to disable default emojis...
-  uri: "https://cinnamondev.github.io/minemoji/packs/twemoji/latest.zip"
+  uri: "https://cinnamondev.github.io/minemoji/packs/twemoji-latest.zip"
 
 enforce-pack: true
 # use minimessage!  :) remove entry to disable prompt
