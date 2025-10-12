@@ -298,7 +298,7 @@ public class PackMaker {
                         ZipEntry ze = new ZipEntry(sourceFolder.toPath().relativize(p).toString());
                         try {
                             out.putNextEntry(ze);
-                            Files.copy(zipFile.toPath(), out);
+                            Files.copy(p, out);
                             out.closeEntry();
                         } catch (IOException e) {
                             throw new RuntimeException(e);
@@ -389,6 +389,7 @@ public class PackMaker {
 
         if (args.createZip) {
             String zipName = args.outputDirectory.getName() + ".zip";
+            System.out.println(args.outputDirectory.getParentFile().toPath().resolve(zipName).toFile());
             zipFiles(args.outputDirectory, args.outputDirectory.getParentFile().toPath().resolve(zipName).toFile());
         }
 
