@@ -35,6 +35,7 @@ jobs:
             --prefix minemoji
             --pack-url https://cinnamondev.github.io/minemoji/packs/minemoji-latest.zip
             --zip-pack --delete-directory
+        - run: df -h
         - run: >
             java -cp minemoji-*.jar com.github.cinnamondev.minemoji.PackMaker.PackMaker 
             --input-directory ./twemoji/assets/svg/
