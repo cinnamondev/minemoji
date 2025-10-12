@@ -1,7 +1,6 @@
 on:
   push:
-    branches: master
-    tags: 't*'
+    tags: 't**'
   workflow_dispatch:
 
 permissions:
