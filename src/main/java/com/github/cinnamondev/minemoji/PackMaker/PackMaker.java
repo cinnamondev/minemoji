@@ -3,7 +3,6 @@ package com.github.cinnamondev.minemoji.PackMaker;
 import com.github.cinnamondev.minemoji.EmojiSet;
 import com.github.cinnamondev.minemoji.Minemoji;
 import com.google.gson.Gson;
-import net.kyori.adventure.key.Key;
 import org.apache.batik.transcoder.TranscoderException;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
@@ -90,7 +89,7 @@ public class PackMaker {
         cliOptions.addOption("v", "verbose", false, "verbose");
     }
     protected record CLIArgs(File inputDirectory, File outputDirectory, URL packUrl, String prefix,
-                             Key atlas, boolean createPackInfo, boolean verbose, int maxVersion, int keyWidth, boolean createZip, boolean deleteDirectory) {
+                             String atlas, boolean createPackInfo, boolean verbose, int maxVersion, int keyWidth, boolean createZip, boolean deleteDirectory) {
         public static CLIArgs fromOpts(String[] args) throws ParseException {
             CommandLineParser parser = new DefaultParser();
             CommandLine commandLine = parser.parse(cliOptions, args);
@@ -100,7 +99,7 @@ public class PackMaker {
                     commandLine.getParsedOptionValue("output-directory"),
                     commandLine.getParsedOptionValue("pack-url"),
                     commandLine.getParsedOptionValue("prefix"),
-                    Key.key(commandLine.getOptionValue("atlas", "paintings")),
+                    commandLine.getOptionValue("atlas", "paintings"),
                     !commandLine.hasOption("skip-packgen"),
                     commandLine.hasOption("verbose"),
                     commandLine.hasOption("max-version")
@@ -137,7 +136,7 @@ public class PackMaker {
         return path;
     }
     protected static void generateAtlas(CLIArgs args) throws IOException {
-        File file = args.outputDirectory.toPath().resolve("assets/minecraft/atlases/" + args.atlas.value() +".json").toFile();
+        File file = args.outputDirectory.toPath().resolve("assets/minecraft/atlases/" + args.atlas +".json").toFile();
         if (!file.exists()) {
             file.getParentFile().mkdirs();
             file.createNewFile();
