@@ -61,7 +61,7 @@ public class Command {
         } else {
             list = manager.getPackByPrefix(context.getArgument("pack", String.class)).stream()
                     .flatMap(p -> p.emojis.stream()
-                            .map(m -> emoteWithLore(m.toComponent(p), ":" + m.emojiText + ":"))
+                            .map(m -> emoteWithLore(SpriteEmojiManager.spriteMetaToComponent(m), ":" + m.emojiText + ":"))
                     ).toList();
         }
 

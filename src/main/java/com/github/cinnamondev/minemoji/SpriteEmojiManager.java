@@ -51,6 +51,13 @@ public class SpriteEmojiManager {
 
     }
 
+    public static ObjectComponent spriteMetaToComponent(EmojiSet.SpriteMeta meta) {
+        return Component.object(ObjectContents.sprite(
+                Key.key("paintings"),
+                Key.key(meta.resource)
+        ));
+    }
+
     public Map<Emoji,ObjectComponent> getDefaultEmojiMap() { return Collections.unmodifiableMap(emojiMap); }
 
 
@@ -161,7 +168,7 @@ public class SpriteEmojiManager {
                 .flatMap(set -> set.emojis.stream()
                         .filter(emote -> emote.emojiText.equalsIgnoreCase(spriteName))
                         .findFirst()
-                         .map(meta -> meta.toComponent(set))
+                         .map(SpriteEmojiManager::spriteMetaToComponent)
                 );
     }
     private Map<String, EmojiSet> discoverEmojiPacks() {
