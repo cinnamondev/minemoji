@@ -30,7 +30,7 @@ jobs:
             java-version: '21'
         - run: >
             java -cp minemoji-*.jar com.github.cinnamondev.minemoji.PackMaker.PackMaker 
-            --input-directory ./sample_pack/input-directory
+            --input-directory ./sample_pack/
             --output-directory ./site/packs/minemoji-latest
             --prefix minemoji
             --pack-url https://cinnamondev.github.io/minemoji/packs/minemoji-latest.zip
