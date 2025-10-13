@@ -40,7 +40,6 @@ public class DiscordIntegration {
 
     @Subscribe
     public void onMessageReceived(GameChatMessagePreProcessEvent e) {
-        Component c = manager.demojize((Component) e.getMessageComponent());
         e.setMessageComponent(toShaded(
                 manager.demojize(fromShaded(e.getMessageComponent()))
         ));
