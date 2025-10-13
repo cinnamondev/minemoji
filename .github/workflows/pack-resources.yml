@@ -40,10 +40,12 @@ jobs:
             java -cp minemoji-*.jar com.github.cinnamondev.minemoji.PackMaker.PackMaker 
             --input-directory ./twemoji/assets/svg/
             --output-directory ./site/packs/twemoji-latest
-            --prefix emotes
+            --prefix unicode
             --skip-packgen
             --pack-url https://cinnamondev.github.io/minemoji/packs/twemoji-latest.zip
             --zip-pack --delete-directory
+        - name: serve example json
+          run: cp ./minemoji/packs/minemoji.json ./site/packs/minemoji-latest.json
         - name: Setup Pages
           uses: actions/configure-pages@v5
         - name: Upload artifacts

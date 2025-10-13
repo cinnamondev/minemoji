@@ -29,7 +29,7 @@ public final class Minemoji extends JavaPlugin {
 
         if (getServer().getPluginManager().isPluginEnabled("DiscordSRV")) {
             DO_DISCORD_SRV = true;
-            discord = new DiscordIntegration(emojiManager);
+            discord = new DiscordIntegration(this,emojiManager);
             DiscordSRV.api.subscribe(discord);
         }
         getServer().getPluginManager().registerEvents(new EmojiRenderer(this), this);

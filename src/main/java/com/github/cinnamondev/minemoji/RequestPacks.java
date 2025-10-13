@@ -24,7 +24,7 @@ public class RequestPacks implements Listener {
                 emojiManager.customPacks.values().parallelStream()
                         .map(e -> ResourcePackInfo.resourcePackInfo()
                                 .uri(e.url)
-                                .id(UUID.fromString(e.prefix))
+                                .id(UUID.nameUUIDFromBytes(e.prefix.getBytes()))
                                 .computeHashAndBuild()
                         ).collect(Collectors.toCollection(ArrayList::new));
 
@@ -35,7 +35,7 @@ public class RequestPacks implements Listener {
             futures.add(
                     ResourcePackInfo.resourcePackInfo()
                             .uri(uri)
-                            .id(UUID.fromString("unicode-emojis"))
+                            .id(UUID.nameUUIDFromBytes("unicode-emojis".getBytes()))
                             .computeHashAndBuild()
             );
         }
@@ -47,7 +47,7 @@ public class RequestPacks implements Listener {
                     Collections.emptyList()
             ));
         }
-        return CompletableFuture.allOf((CompletableFuture<ResourcePackInfo>[]) futures.toArray())
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
                 .thenApply(_v -> new RequestPacks(
                         p, emojiManager,
                         futures.stream()
@@ -56,40 +56,21 @@ public class RequestPacks implements Listener {
                 ));
     }
 
-    private final ResourcePackRequest request;
     private final Minemoji p;
+    private final List<ResourcePackInfo> packs;
+    private final Component joinPrompt;
     protected RequestPacks(Minemoji p, SpriteEmojiManager emojiManager, List<ResourcePackInfo> packs) {
         this.p = p;
-        Component joinPrompt; {
-            String miniMessage= p.getConfig().getString("join-prompt");
-            if (miniMessage != null && !miniMessage.isEmpty()) {
-                MiniMessage mm = MiniMessage.miniMessage();
-                joinPrompt = mm.deserialize(miniMessage);
-            } else {
-                joinPrompt = null;
-            }
+        this.packs = packs;
+        String miniMessage= p.getConfig().getString("join-prompt");
+        if (miniMessage != null && !miniMessage.isEmpty()) {
+            MiniMessage mm = MiniMessage.miniMessage();
+            joinPrompt = mm.deserialize(miniMessage);
+        } else {
+            joinPrompt = null;
         }
 
-        request = ResourcePackRequest.resourcePackRequest()
-                .packs(packs)
-                .replace(false)
-                .required(p.getConfig().getBoolean("enforce-packs", false))
-                .prompt(joinPrompt)
-                .callback(ResourcePackCallback.onTerminal(
-                        (uuid, audience) -> { // success
-                            waitingConfigurationThreads.computeIfPresent(uuid, (_uuid, latch) -> {
-                                latch.countDown();
-                                return latch;
-                            });
-                            p.getLogger().info("Successfully sent resource packs to " + uuid.toString());
-                        }, (uuid, audience) -> {
-                            waitingConfigurationThreads.computeIfPresent(uuid, (_uuid, latch) -> {
-                                latch.countDown();
-                                return latch;
-                            });
-                            audience.sendMessage(Component.text("We use resource packs to serve emojis too! :("));
-                        }
-                )).build();
+
 
     }
 
@@ -97,12 +78,35 @@ public class RequestPacks implements Listener {
 
     @EventHandler
     public void serveEmojiPacks(AsyncPlayerConnectionConfigureEvent e) throws InterruptedException {
+        UUID uuid = e.getConnection().getProfile().getId();
+        // latch is put in a map so it's accessible from other events too.
         CountDownLatch latch = waitingConfigurationThreads
-                .computeIfAbsent(e.getConnection().getProfile().getId(), _u -> new CountDownLatch(1));
+                .computeIfAbsent(uuid, _u -> new CountDownLatch(packs.size()));
+
+        ResourcePackRequest request = ResourcePackRequest.resourcePackRequest()
+                .packs(packs)
+                .replace(false)
+                .required(p.getConfig().getBoolean("enforce-packs", false))
+                .prompt(joinPrompt)
+                .callback(ResourcePackCallback.onTerminal(
+                        (packUuid, audience) -> { // success
+                            waitingConfigurationThreads.computeIfPresent(uuid, (_uuid, l) -> {
+                                l.countDown();
+                                return l;
+                            });
+                            p.getLogger().info("Successfully sent resource packs to " + uuid.toString());
+                        }, (packUuid, audience) -> {
+                            waitingConfigurationThreads.computeIfPresent(uuid, (_uuid, l) -> {
+                                l.countDown();
+                                return l;
+                            });
+                            audience.sendMessage(Component.text("We use resource packs to serve emojis! :("));
+                        }
+                )).build();
 
         e.getConnection().getAudience().sendResourcePacks(request);
 
-        latch.await(15L, TimeUnit.SECONDS);
+        latch.await(30L, TimeUnit.SECONDS);
         //event.getConnection().getAudience()
         //        .sendResourcePacks()
     }
@@ -110,7 +114,10 @@ public class RequestPacks implements Listener {
     public void onConnectionDrop(PlayerConnectionCloseEvent e) {
         CountDownLatch latch = waitingConfigurationThreads.get(e.getPlayerUniqueId());
         if (latch == null) { return; }
-        latch.countDown();
+
+        while (latch.getCount() > 0) { // janky just drain the latch so we can drop this thread
+            latch.countDown();
+        }
         p.getServer().getScheduler()
                 .runTaskLaterAsynchronously(p, () -> waitingConfigurationThreads.remove(e.getPlayerUniqueId()), 5L);
     }
