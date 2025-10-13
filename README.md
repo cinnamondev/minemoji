@@ -6,7 +6,8 @@ Animated sprites supported, will work with DiscordSRV (translate the discord emo
 
 (Supports Paper 1.21.9/10+!)
 
-<video src="./assets/demo.mp4" width="480" height="320" controls></video>
+https://github.com/user-attachments/assets/404500c4-36d6-4563-a049-5e0031ad3cd0
+
 ### Note on DiscordSRV integration
 
 I don't think this would play very nice with other plugins that hook into
