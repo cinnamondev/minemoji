@@ -8,18 +8,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
-import java.util.HashMap;
-import java.util.Map;
 
 public class EmojiRenderer implements Listener, io.papermc.paper.chat.ChatRenderer {
-    private final Map<String, Component> codepointLookup = new HashMap<>();
-    private final Map<String, Component> identfierLookup = new HashMap<>();
-    //private final Pattern pattern;
-
-    private final Minemoji p;
-    public EmojiRenderer(Minemoji p) {
-        this.p = p;
-        //pattern = Pattern.compile(":(sob|):");
+    private final SpriteEmojiManager manager;
+    public EmojiRenderer(SpriteEmojiManager manager) {
+        this.manager = manager;
     }
 
     @EventHandler
@@ -29,8 +22,9 @@ public class EmojiRenderer implements Listener, io.papermc.paper.chat.ChatRender
 
     @Override
     public Component render(Player source, Component sourceDisplayName, Component message, Audience viewer) {
-        var newComponent = p.emojiManager.emojize(message);
-        p.emojiManager.demojize(newComponent);
-        return ChatRenderer.defaultRenderer().render(source, sourceDisplayName, newComponent, viewer);
+        if (!source.hasPermission("minemoji.emoji")) {
+            return ChatRenderer.defaultRenderer().render(source, sourceDisplayName, message, viewer);
+        }
+        return ChatRenderer.defaultRenderer().render(source, sourceDisplayName, manager.emojize(message), viewer);
     }
 }

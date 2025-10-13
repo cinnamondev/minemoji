@@ -6,7 +6,7 @@
 
     <groupId>com.github.cinnamondev</groupId>
     <artifactId>minemoji</artifactId>
-    <version>1.01</version>
+    <version>1.02</version>
     <packaging>jar</packaging>
 
     <name>minemoji</name>
@@ -83,26 +83,16 @@
             <artifactId>jemoji</artifactId>
             <version>1.7.5</version>
         </dependency>
-        <!--Batik & Commons-CLI is only required for PackMaker to be available.-->
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.11.0</version>
-        </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-collections4</artifactId>
             <version>4.4</version>
         </dependency>
+        <!--Batik & Commons-CLI is only required for PackMaker to be available.-->
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>2.24.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>2.24.1</version>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.11.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.xmlgraphics</groupId>

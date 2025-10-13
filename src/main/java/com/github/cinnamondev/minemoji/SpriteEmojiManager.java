@@ -16,9 +16,17 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class SpriteEmojiManager {
     private final Minemoji p;
@@ -31,14 +39,81 @@ public class SpriteEmojiManager {
     Map<String, EmojiSet> customPacks;
     BidiMap<String,Key> customSprites;
 
-    public SpriteEmojiManager(Minemoji p) {
+    public static CompletableFuture<SpriteEmojiManager> fromRemotePacks(Minemoji p, List<URI> packs) {
+        p.getLogger().info("Creating emoji manager using remote packs");
+        Gson gson = new Gson();
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            List<CompletableFuture<EmojiSet>> futures = packs.stream()
+                    .map(pack -> HttpRequest.newBuilder(pack).GET().build())
+                    .map(request -> client
+                            .sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
+                            .thenApply(HttpResponse::body)
+                            .thenApply(InputStreamReader::new)
+                            .thenApply(stream -> gson.fromJson(stream, EmojiSet.class))
+                    ).toList();
+
+            return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+                    .thenApply(_v -> futures.stream().map(CompletableFuture::join))
+                    // if fails exceptionally, go through the futures and remove the ones that mucked up.
+                    .exceptionally(ex -> futures.stream().flatMap(f -> {
+                        try {
+                            return Stream.of(f.join());
+                        } catch (CompletionException e) {
+                            p.getLogger().warning("Malformed pack, ignoring... See message");
+                            p.getLogger().warning(ex.getMessage());
+                            return Stream.empty();
+                        }
+                    }))
+                    .thenApply(s -> s.map(set -> Map.entry(set.prefix, set))
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                    ).thenApply(map -> new SpriteEmojiManager(p, map));
+        }
+    }
+
+    public static SpriteEmojiManager fromLocalPacks(Minemoji p, File packsDirectory) {
+        p.getLogger().info("Creating emoji manager using local packs");
+        return new SpriteEmojiManager(p, discoverEmojiPacks(p, packsDirectory));
+    }
+
+    private static Map<String, EmojiSet> discoverEmojiPacks(Minemoji p, File packsDirectory) {
+        HashMap<String, EmojiSet> map = new HashMap<>();
+        Gson gson = new Gson();
+        if (!packsDirectory.exists()) {
+            packsDirectory.mkdirs();
+            p.getLogger().info("Creating packs directory (no packs available): " + packsDirectory.getAbsolutePath());
+            return Collections.emptyMap();
+        }
+
+        File[] files = packsDirectory.listFiles((dir, name) -> name.endsWith(".json"));
+        if (files == null || files.length == 0) {
+            p.getLogger().info("no files in packs directory matching filter(?)");
+            return Collections.emptyMap();
+        }
+
+        for (File pack : files) {
+            try {
+                FileReader reader = new FileReader(pack);
+                EmojiSet set = gson.fromJson(reader, EmojiSet.class);
+                for (EmojiSet.SpriteMeta emoji : set.emojis) {
+                    emoji.emojiText = emoji.emojiText.toLowerCase().strip();
+                }
+                map.put(set.prefix, set);
+            } catch (FileNotFoundException e) { // we shouldnt generally EXPECT to end up here, but for now we just
+                throw new RuntimeException(e);  // wrap it.
+            }
+        }
+        return Collections.unmodifiableMap(map);
+    }
+
+    protected SpriteEmojiManager(Minemoji p, Map<String, EmojiSet> customPacks) {
         this.p = p;
+        p.getLogger().info("Found following packs:" + String.join(", ", customPacks.keySet()));
         if (p.getConfig().getBoolean("unicode-emojis.enabled", true)) {
             this.emojiMap = createBaseEmojiSet();
             if (!emojiMap.isEmpty()) { IS_BASE_EMOJIS_AVAILABLE = true; }
         } else { this.emojiMap = Collections.emptyMap(); }
 
-        this.customPacks = discoverEmojiPacks();
+        this.customPacks = customPacks;
         this.customSprites = new DualHashBidiMap<>(customPacks.entrySet().stream()
                 .flatMap(e ->
                         e.getValue().emojis.stream()
@@ -59,7 +134,7 @@ public class SpriteEmojiManager {
     }
 
     public Map<Emoji,ObjectComponent> getDefaultEmojiMap() { return Collections.unmodifiableMap(emojiMap); }
-
+    public Map<String, EmojiSet> getCustomPacks() { return Collections.unmodifiableMap(customPacks); }
 
     public Optional<ObjectComponent> getEmojiFromActual(Emoji emoji) {
         return Optional.ofNullable(emojiMap.get(emoji));
@@ -99,10 +174,17 @@ public class SpriteEmojiManager {
     ///  (has to search rather than map lookup)
     private final TextReplacementConfig PREFIXED_EMOTE_REPLACER = TextReplacementConfig.builder()
             .match(Pattern.compile(":([a-zA-Z0-9_]*--[a-zA-Z0-9_]*):"))
-            .replacement((result, b) ->
-                    getNamespacedCustomEmoji(result.group().trim().toLowerCase()).map(c -> (Component) c)
-                        .orElse(Component.text(result.group()))
-            ).build();
+            .replacement((result, b) -> {
+                if (result.group().trim().toLowerCase().split("--")[0].equalsIgnoreCase("unicode")) {
+                    return EmojiManager.getEmoji(result.group())
+                            .flatMap(emoji -> getEmojiFromActual(emoji).map(c -> (Component) c))
+                            .orElse(Component.text(result.group()));
+                } else {
+                    return getNamespacedCustomEmoji(result.group().trim().toLowerCase()).map(c -> (Component) c)
+                            .orElse(Component.text(result.group()));
+                }
+
+            }).build();
 
     ///  Text replacer that replaces custom or default emotes according to their name/alias.
     ///  As per how the alias and sprite lookups are, if there is a conflict of names, whichever came in last
@@ -170,35 +252,5 @@ public class SpriteEmojiManager {
                         .findFirst()
                          .map(SpriteEmojiManager::spriteMetaToComponent)
                 );
-    }
-    private Map<String, EmojiSet> discoverEmojiPacks() {
-        HashMap<String, EmojiSet> map = new HashMap<>();
-        Gson gson = new Gson();
-        File packsDirectory = p.getDataPath().resolve("packs/").toFile();
-        if (!packsDirectory.exists()) {
-            packsDirectory.mkdirs();
-            p.getLogger().info("Creating packs directory (no packs available): " + packsDirectory.getAbsolutePath());
-            return Collections.emptyMap();
-        }
-
-        File[] files = packsDirectory.listFiles((dir, name) -> name.endsWith(".json"));
-        if (files == null || files.length == 0) {
-            p.getLogger().info("no files in packs directory matching filter(?)");
-            return Collections.emptyMap();
-        }
-
-        for (File pack : files) {
-            try {
-                FileReader reader = new FileReader(pack);
-                EmojiSet set = gson.fromJson(reader, EmojiSet.class);
-                for (EmojiSet.SpriteMeta emoji : set.emojis) {
-                    emoji.emojiText = emoji.emojiText.toLowerCase().strip();
-                }
-                map.put(set.prefix, set);
-            } catch (FileNotFoundException e) { // we shouldnt generally EXPECT to end up here, but for now we just
-                throw new RuntimeException(e);  // wrap it.
-            }
-        }
-        return Collections.unmodifiableMap(map);
     }
 }

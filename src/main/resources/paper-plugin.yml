@@ -1,5 +1,5 @@
 name: minemoji
-version: '1.01'
+version: '1.02'
 main: com.github.cinnamondev.minemoji.Minemoji
 api-version: '1.21'
 
@@ -8,3 +8,11 @@ dependencies:
     DiscordSRV:
       required: false
       load: BEFORE
+
+permissions:
+  minemoji.emoji:
+    description: "use emojis"
+    default: true
+  minemoji.list:
+    description: "list emojis"
+    default: true

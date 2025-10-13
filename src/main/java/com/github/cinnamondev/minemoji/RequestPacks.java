@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class RequestPacks implements Listener {
@@ -41,15 +42,14 @@ public class RequestPacks implements Listener {
         }
 
         if (futures.isEmpty()) {
-            p.getLogger().warning("No resource packs to serve.");
+            p.getComponentLogger().warn("No resource packs to serve.");
             return CompletableFuture.completedFuture(new RequestPacks(
-                    p, emojiManager,
-                    Collections.emptyList()
+                    p, Collections.emptyList()
             ));
         }
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
                 .thenApply(_v -> new RequestPacks(
-                        p, emojiManager,
+                        p,
                         futures.stream()
                                 .map(CompletableFuture::join)
                                 .toList()
@@ -59,7 +59,7 @@ public class RequestPacks implements Listener {
     private final Minemoji p;
     private final List<ResourcePackInfo> packs;
     private final Component joinPrompt;
-    protected RequestPacks(Minemoji p, SpriteEmojiManager emojiManager, List<ResourcePackInfo> packs) {
+    protected RequestPacks(Minemoji p, List<ResourcePackInfo> packs) {
         this.p = p;
         this.packs = packs;
         String miniMessage= p.getConfig().getString("join-prompt");
@@ -83,6 +83,7 @@ public class RequestPacks implements Listener {
         CountDownLatch latch = waitingConfigurationThreads
                 .computeIfAbsent(uuid, _u -> new CountDownLatch(packs.size()));
 
+        AtomicBoolean accepted = new AtomicBoolean(true);
         ResourcePackRequest request = ResourcePackRequest.resourcePackRequest()
                 .packs(packs)
                 .replace(false)
@@ -94,12 +95,12 @@ public class RequestPacks implements Listener {
                                 l.countDown();
                                 return l;
                             });
-                            p.getLogger().info("Successfully sent resource packs to " + uuid.toString());
                         }, (packUuid, audience) -> {
                             waitingConfigurationThreads.computeIfPresent(uuid, (_uuid, l) -> {
                                 l.countDown();
                                 return l;
                             });
+                            accepted.set(false);
                             audience.sendMessage(Component.text("We use resource packs to serve emojis! :("));
                         }
                 )).build();
@@ -107,10 +108,14 @@ public class RequestPacks implements Listener {
         e.getConnection().getAudience().sendResourcePacks(request);
 
         latch.await(30L, TimeUnit.SECONDS);
+        if (!accepted.get() && p.getConfig().getBoolean("enforce-packs", false)) {
+            e.getConnection().disconnect(Component.text("Resource pack is required!"));
+        }
         //event.getConnection().getAudience()
         //        .sendResourcePacks()
     }
 
+    @EventHandler
     public void onConnectionDrop(PlayerConnectionCloseEvent e) {
         CountDownLatch latch = waitingConfigurationThreads.get(e.getPlayerUniqueId());
         if (latch == null) { return; }

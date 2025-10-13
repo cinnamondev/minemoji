@@ -1,7 +1,6 @@
 package com.github.cinnamondev.minemoji.PackMaker;
 
 import com.github.cinnamondev.minemoji.EmojiSet;
-import com.github.cinnamondev.minemoji.Minemoji;
 import com.google.gson.Gson;
 import org.apache.batik.transcoder.TranscoderException;
 import org.apache.batik.transcoder.TranscoderInput;
@@ -9,9 +8,6 @@ import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
@@ -39,7 +35,6 @@ import java.util.zip.ZipOutputStream;
 ///  half finished resource pack generator
 /// java -cp jar com.github.cinnamondev.minemoji.PackMaker.PackMaker (...args)
 public class PackMaker {
-    private static final Logger LOG = LogManager.getLogger(PackMaker.class);
     private static final Options cliOptions;
     static {
         cliOptions = new Options();
@@ -313,10 +308,7 @@ public class PackMaker {
 
     public static void main(String[] __args) throws ParseException, URISyntaxException, IOException, TranscoderException {
         var args = CLIArgs.fromOpts(__args);
-        if (args.verbose) { LOG.atLevel(Level.ALL); } else { LOG.atLevel(Level.WARN); }
         System.out.println(args);
-        LOG.info(args);
-
 
         Path packJsonDirectory = Paths.get(PackMaker.class.getProtectionDomain().getCodeSource().getLocation().toURI())
                 .getParent()

@@ -40,6 +40,7 @@ jobs:
             java -cp minemoji-*.jar com.github.cinnamondev.minemoji.PackMaker.PackMaker 
             --input-directory ./twemoji/assets/svg/
             --output-directory ./site/packs/twemoji-latest
+            --width 48
             --prefix unicode
             --skip-packgen
             --pack-url https://cinnamondev.github.io/minemoji/packs/twemoji-latest.zip
