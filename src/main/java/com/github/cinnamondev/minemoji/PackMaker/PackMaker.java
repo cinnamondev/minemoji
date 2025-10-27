@@ -80,13 +80,17 @@ public class PackMaker {
         zipDeleteDirectory.setRequired(false);
         cliOptions.addOption(zipDeleteDirectory);
 
-        cliOptions.addOption("a", "atlas", true, "atlas key used. not rec to change.");
+        cliOptions.addOption("t", "atlas", true, "atlas key used. not rec to change.");
         cliOptions.addOption("v", "verbose", false, "verbose");
 
         cliOptions.addOption("c", "dontServe", false, "dont serve pack to client?");
+        cliOptions.addOption("a", "append", false, "append to pack");
     }
     protected record CLIArgs(File inputDirectory, File outputDirectory, URL packUrl, String prefix,
-                             String atlas, boolean createPackInfo, boolean verbose, int maxVersion, int keyWidth, boolean createZip, boolean deleteDirectory, boolean serveToClient) {
+                             String atlas,
+                             boolean createPackInfo, boolean verbose, int maxVersion,
+                             int keyWidth, boolean createZip, boolean deleteDirectory,
+                             boolean serveToClient, boolean appendToPack) {
         public static CLIArgs fromOpts(String[] args) throws ParseException {
             CommandLineParser parser = new DefaultParser();
             CommandLine commandLine = parser.parse(cliOptions, args);
@@ -107,7 +111,8 @@ public class PackMaker {
                             : 32,
                     commandLine.hasOption("zip-pack"),
                     commandLine.hasOption("delete-directory") && commandLine.hasOption("zip-pack"),
-                    !commandLine.hasOption("serve")
+                    !commandLine.hasOption("serve"),
+                    commandLine.hasOption("append")
             );
         }
     }
@@ -372,10 +377,12 @@ public class PackMaker {
             }
         }
 
-        set.emojis = emojis;
+        if (args.appendToPack) {
+            set.emojis.addAll(emojis);
+        } else { set.emojis = emojis; }
+
         if (args.createPackInfo) {
             if (!jsonFile.exists()) { jsonFile.createNewFile(); }
-            set.emojis = emojis;
             try (BufferedWriter bw = new BufferedWriter(new FileWriter(jsonFile, false))) {
                 gson.toJson(set, bw);
             }
@@ -383,7 +390,9 @@ public class PackMaker {
         }
 
         generateAtlas(args);
-        generatePackMCMeta(args);
+        if (!args.appendToPack) {
+            generatePackMCMeta(args);
+        }
 
         if (args.createZip) {
             String zipName = args.outputDirectory.getName() + ".zip";
