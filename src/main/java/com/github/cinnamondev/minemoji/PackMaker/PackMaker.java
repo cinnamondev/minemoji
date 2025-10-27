@@ -82,9 +82,11 @@ public class PackMaker {
 
         cliOptions.addOption("a", "atlas", true, "atlas key used. not rec to change.");
         cliOptions.addOption("v", "verbose", false, "verbose");
+
+        cliOptions.addOption("c", "dontServe", false, "dont serve pack to client?");
     }
     protected record CLIArgs(File inputDirectory, File outputDirectory, URL packUrl, String prefix,
-                             String atlas, boolean createPackInfo, boolean verbose, int maxVersion, int keyWidth, boolean createZip, boolean deleteDirectory) {
+                             String atlas, boolean createPackInfo, boolean verbose, int maxVersion, int keyWidth, boolean createZip, boolean deleteDirectory, boolean serveToClient) {
         public static CLIArgs fromOpts(String[] args) throws ParseException {
             CommandLineParser parser = new DefaultParser();
             CommandLine commandLine = parser.parse(cliOptions, args);
@@ -104,7 +106,8 @@ public class PackMaker {
                             ? ((Number) commandLine.getParsedOptionValue("width")).intValue()
                             : 32,
                     commandLine.hasOption("zip-pack"),
-                    commandLine.hasOption("delete-directory") && commandLine.hasOption("zip-pack")
+                    commandLine.hasOption("delete-directory") && commandLine.hasOption("zip-pack"),
+                    !commandLine.hasOption("serve")
             );
         }
     }
@@ -325,15 +328,15 @@ public class PackMaker {
             try (BufferedReader br = new BufferedReader(new FileReader(jsonFile))) {
                 set = gson.fromJson(br, EmojiSet.class);
                 set.packVersion += 1;
-                set.prefix = args.prefix;
-                set.url = args.packUrl.toURI();
             }
         } else {
             set = new EmojiSet();
-            set.prefix = args.prefix;
             set.packVersion = 1;
-            set.url = args.packUrl.toURI();
         }
+        set.prefix = args.prefix;
+        set.url = args.packUrl.toURI();
+        set.serveToClient = args.serveToClient;
+
         System.out.println(set.prefix);
 
         if (!args.outputDirectory.exists()) { args.outputDirectory.mkdirs(); }

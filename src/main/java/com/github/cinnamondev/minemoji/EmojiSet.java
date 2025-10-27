@@ -18,5 +18,6 @@ public class EmojiSet {
     public String prefix;
     public int packVersion;
     public URI url;
+    public boolean serveToClient;
     public List<SpriteMeta> emojis;
 }

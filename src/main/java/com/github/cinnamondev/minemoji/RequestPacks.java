@@ -23,6 +23,7 @@ public class RequestPacks implements Listener {
     public static CompletableFuture<RequestPacks> requestPacks(Minemoji p, SpriteEmojiManager emojiManager) throws URISyntaxException {
         ArrayList<CompletableFuture<ResourcePackInfo>> futures =
                 emojiManager.customPacks.values().parallelStream()
+                        .filter(pack -> pack.serveToClient)
                         .map(e -> ResourcePackInfo.resourcePackInfo()
                                 .uri(e.url)
                                 .id(UUID.nameUUIDFromBytes(e.prefix.getBytes()))
