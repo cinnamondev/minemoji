@@ -386,7 +386,7 @@ public class PackMaker {
             try (BufferedWriter bw = new BufferedWriter(new FileWriter(jsonFile, false))) {
                 gson.toJson(set, bw);
             }
-            Files.copy(jsonFile.toPath(), new File(args.outputDirectory + "/pack.json").toPath(), StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(jsonFile.toPath(), new File(args.outputDirectory + "/" + args.prefix + ".json").toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
 
         generateAtlas(args);
