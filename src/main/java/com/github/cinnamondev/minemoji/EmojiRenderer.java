@@ -7,6 +7,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.jetbrains.annotations.NotNull;
 
 
 public class EmojiRenderer implements Listener, io.papermc.paper.chat.ChatRenderer {
@@ -21,7 +22,7 @@ public class EmojiRenderer implements Listener, io.papermc.paper.chat.ChatRender
     }
 
     @Override
-    public Component render(Player source, Component sourceDisplayName, Component message, Audience viewer) {
+    public @NotNull Component render(Player source, @NotNull Component sourceDisplayName, @NotNull Component message, @NotNull Audience viewer) {
         if (!source.hasPermission("minemoji.emoji")) {
             return ChatRenderer.defaultRenderer().render(source, sourceDisplayName, message, viewer);
         }

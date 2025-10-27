@@ -173,14 +173,14 @@ public class SpriteEmojiManager {
     ///  Text replacer that replaces prefixed emotes :identifier--sprite: with their corresponding emoji
     ///  (has to search rather than map lookup)
     private final TextReplacementConfig PREFIXED_EMOTE_REPLACER = TextReplacementConfig.builder()
-            .match(Pattern.compile(":([a-zA-Z0-9_]*--[a-zA-Z0-9_]*):"))
+            .match(Pattern.compile(":(([a-zA-Z0-9_]*)--([a-zA-Z0-9_~]*)):"))
             .replacement((result, b) -> {
-                if (result.group().trim().toLowerCase().split("--")[0].equalsIgnoreCase("unicode")) {
-                    return EmojiManager.getEmoji(result.group())
+                if (result.group(2).trim().equalsIgnoreCase("unicode")) {
+                    return EmojiManager.getByDiscordAlias(":" + result.group(3) + ":")
                             .flatMap(emoji -> getEmojiFromActual(emoji).map(c -> (Component) c))
                             .orElse(Component.text(result.group()));
                 } else {
-                    return getNamespacedCustomEmoji(result.group().trim().toLowerCase()).map(c -> (Component) c)
+                    return getNamespacedCustomEmoji(result.group(1).trim().toLowerCase()).map(c -> (Component) c)
                             .orElse(Component.text(result.group()));
                 }
 
@@ -190,7 +190,7 @@ public class SpriteEmojiManager {
     ///  As per how the alias and sprite lookups are, if there is a conflict of names, whichever came in last
     ///  gets the spot. Default emotes should override all emotes.
     private final TextReplacementConfig DEFAULT_EMOTE_REPLACER = TextReplacementConfig.builder()
-            .match(":([a-zA-Z0-9_]*):")
+            .match(":([a-zA-Z0-9_~]*):")
             .replacement((result, b) -> {
                 String match = result.group(1).toLowerCase().trim();
                 return getCustomEmoji(match).map(c -> (Component) c)
