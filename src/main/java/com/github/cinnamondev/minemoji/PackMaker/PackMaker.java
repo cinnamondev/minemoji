@@ -193,7 +193,8 @@ public class PackMaker {
         IIOMetadataNode graphicsController = getNode(root, "GraphicControlExtension");
         String unparsedTime = graphicsController.getAttribute("delayTime");
 
-        return Integer.parseInt(unparsedTime);
+        int time = Integer.parseInt(unparsedTime);
+        return time != 0 ? time : 10; // 10 / 5 -> 2 frametime
     }
 
     protected static int modeOfList(List<Integer> list) {
@@ -240,7 +241,7 @@ public class PackMaker {
             int currentFrame = frameTimes.get(i);
             String frameOutput;
             if (currentFrame == mode || currentFrame == -1) {
-                frameOutput = String.valueOf(currentFrame);
+                frameOutput = String.valueOf(i);
             } else {
                 hasNonStandardFrames = true;
                 int currentFrameTicks;
@@ -258,7 +259,8 @@ public class PackMaker {
         // TODO writer with frametime do when home!!
         if (!mcmetaFile.exists()) { mcmetaFile.createNewFile(); }
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(mcmetaFile))) {
-            bw.write("{\"animation\": {\"frametime\":" + (mode/5) +
+            int frametime = mode/5;
+            bw.write("{\"animation\": {\"frametime\":" + (frametime != 0 ? frametime : 1) +
                     (hasNonStandardFrames // we only add the array we made if we have different frame delays.
                             ? ",\"frames\": [" + String.join(",", frames) +"]"
                             : ""
@@ -344,12 +346,13 @@ public class PackMaker {
         List<String> endings = Arrays.stream(ImageIO.getReaderFileSuffixes()).toList();
         ArrayList<EmojiSet.SpriteMeta> emojis = new ArrayList<>();
         for (File file : args.inputDirectory.listFiles()) {
-            String baseString = file.getName().substring(0, file.getName().lastIndexOf('.'));
+            String baseString = file.getName().substring(0, file.getName().lastIndexOf('.')).toLowerCase();
+            String resourceName = baseString.replace('~', '-');
             String fileEnding = file.getName().substring(file.getName().lastIndexOf('.') + 1);
-            File outputFile = texturesFolder(args).resolve(baseString + ".png").toFile();
+            File outputFile = texturesFolder(args).resolve(resourceName + ".png").toFile();
             switch (fileEnding) {
                 case "svg" -> processSvg(args, file, outputFile);
-                case "gif" -> processGif(args, gifReader, file, outputFile, texturesFolder(args).resolve(baseString + ".png.mcmeta").toFile());
+                case "gif" -> processGif(args, gifReader, file, outputFile, texturesFolder(args).resolve(resourceName + ".png.mcmeta").toFile());
                 default -> {
                     if (endings.contains(fileEnding)) {
                         genericTranscodeResize(args, file, outputFile);
@@ -360,8 +363,8 @@ public class PackMaker {
             String spriteName = baseString.replace('.', '-');
             if (args.createPackInfo) {
                 emojis.add(new EmojiSet.SpriteMeta(
-                        spriteName,
-                        args.prefix + "/" + spriteName
+                        baseString.replace('.', '-'),
+                        args.prefix + "/" + resourceName
                 ));
             }
         }
