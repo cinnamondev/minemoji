@@ -58,7 +58,7 @@ public final class Minemoji extends JavaPlugin {
                     });
         }
 
-        managerFuture.thenApply(EmojiRenderer::new)
+        managerFuture.thenApply(m -> new EmojiRenderer(m, getServer().getPluginManager().isPluginEnabled("DiscordSRV")))
                 .thenAccept(listener -> getServer().getPluginManager().registerEvents(listener, this))
                 .exceptionally(ex -> {
                     getComponentLogger().warn("Couldn't attach emoji chat renderer, see:",ex);

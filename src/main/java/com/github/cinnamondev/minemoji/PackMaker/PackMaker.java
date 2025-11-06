@@ -8,6 +8,7 @@ import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
@@ -150,23 +151,40 @@ public class PackMaker {
         bw.close();
     }
 
-    protected static int getFramerateOrDefault(@Nullable File infoFile) throws IOException {
-        if (!infoFile.exists()) { return DEFAULT_FRAMERATE; }
-        try (BufferedReader bw = new BufferedReader(new FileReader(infoFile))) {
-            String unparsedLine = bw.readLine();
-            if (NumberUtils.isCreatable(unparsedLine)) {
-                return Integer.parseInt(unparsedLine);
-            } else {
-                return DEFAULT_FRAMERATE;
+    public record FileInfo(int maxFramerate, boolean isAnimated, long snowflake) {
+        public boolean isNonStandard() { return maxFramerate != -1 || !isAnimated || snowflake != -1; }
+        public static FileInfo fromFile(@NotNull File file) throws IOException {
+            if (!file.exists() || !file.isFile()) {
+                System.out.println("no info file present for image. using defaults");
+                return new FileInfo(-1, false, -1);
+            }
+            try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                int maxFramerate = -1;
+                boolean animated = false;
+                long snowflake = -1;
+                for (String s : br.lines().toList()) {
+                    if (maxFramerate != -1 && animated && snowflake != -1) {
+                        break; // all fields filled
+                    }
+                    if (s.startsWith("f") && NumberUtils.isCreatable(s.substring(1))) {
+                        maxFramerate = Integer.parseInt(s.substring(1));
+                    }
+                    if (s.startsWith("a") && NumberUtils.isCreatable(s.substring(1))) {
+                        animated = true;
+                        snowflake = Long.parseLong(s.substring(1));
+                    }
+                    if (NumberUtils.isCreatable(s)) {
+                        animated = false;
+                        snowflake = Long.parseLong(s.substring(1));
+                    }
+                }
+                return new FileInfo(maxFramerate, animated, snowflake);
             }
         }
     }
-    protected static File resolveInfoFile(File file) {
-        return file.getParentFile().toPath().resolve(file.getName() + ".info").toFile();
-    }
 
     ///  transcodes and saves SVGs using args specified.
-    public static void processSvg(CLIArgs args, File file, File outFile) throws IOException, TranscoderException {
+    public static void processSvg(CLIArgs args, File file, File outFile, FileInfo info) throws IOException, TranscoderException {
         PNGTranscoder t = new PNGTranscoder();
         t.addTranscodingHint(PNGTranscoder.KEY_WIDTH, (float) args.keyWidth);
         t.addTranscodingHint(PNGTranscoder.KEY_HEIGHT, (float) args.keyWidth);
@@ -216,8 +234,8 @@ public class PackMaker {
                 .orElseThrow();
     }
 
-    protected static void processGif(CLIArgs args, ImageReader gifReader, File file, File outFile, File mcmetaFile) throws IOException {
-        int maxFramerate = getFramerateOrDefault(resolveInfoFile(file));
+    protected static void processGif(CLIArgs args, ImageReader gifReader, File file, File outFile, FileInfo info, File mcmetaFile) throws IOException {
+        int maxFramerate = info.maxFramerate == -1 ? info.maxFramerate : DEFAULT_FRAMERATE;
         if (maxFramerate > 20) { maxFramerate = 20; } // framerate is capped by the game! 20 fps -> 1 fpt
 
         ArrayList<Integer> frameTimes =  new ArrayList<>(); // the most common entry will be turned into frameTime.
@@ -278,7 +296,7 @@ public class PackMaker {
         stream.close();
     }
 
-    protected static void genericTranscodeResize(CLIArgs args, File file, File outFile) throws IOException {
+    protected static void genericTranscodeResize(CLIArgs args, File file, File outFile, FileInfo info) throws IOException {
         ImageInputStream s = ImageIO.createImageInputStream(file);
         BufferedImage image = ImageIO.read(s);
         Image scaledImage = image.getScaledInstance(args.keyWidth, args.keyWidth, Image.SCALE_SMOOTH);
@@ -357,23 +375,37 @@ public class PackMaker {
             String baseString = file.getName().substring(0, file.getName().lastIndexOf('.')).toLowerCase();
             String resourceName = baseString.replace('~', '-');
             String fileEnding = file.getName().substring(file.getName().lastIndexOf('.') + 1);
+
             File outputFile = texturesFolder(args).resolve(resourceName + ".png").toFile();
+            File infoFile = file.getParentFile().toPath().resolve(file.getName() + ".info").toFile();
+            System.out.println(infoFile.toString());
+            FileInfo info = FileInfo.fromFile(infoFile);
+            File mcmetaFile = texturesFolder(args).resolve(resourceName + ".png.mcmeta").toFile();
             switch (fileEnding) {
-                case "svg" -> processSvg(args, file, outputFile);
-                case "gif" -> processGif(args, gifReader, file, outputFile, texturesFolder(args).resolve(resourceName + ".png.mcmeta").toFile());
+                case "svg" -> processSvg(args, file, outputFile, info);
+                case "gif" -> processGif(args, gifReader, file, outputFile, info, mcmetaFile);
                 default -> {
                     if (endings.contains(fileEnding)) {
-                        genericTranscodeResize(args, file, outputFile);
+                        genericTranscodeResize(args, file, outputFile, info);
                     }
                 }
             }
 
             String spriteName = baseString.replace('.', '-');
             if (args.createPackInfo) {
-                emojis.add(new EmojiSet.SpriteMeta(
-                        baseString.replace('.', '-'),
-                        args.prefix + "/" + resourceName
-                ));
+                if (info.isNonStandard()) {
+                    emojis.add(new EmojiSet.SpriteMeta(
+                            baseString.replace('.', '-'),
+                            args.prefix + "/" + resourceName,
+                            info.snowflake,
+                            info.isAnimated
+                    ));
+                } else {
+                    emojis.add(new EmojiSet.SpriteMeta(
+                            baseString.replace('.', '-'),
+                            args.prefix + "/" + resourceName
+                    ));
+                }
             }
         }
 

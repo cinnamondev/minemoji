@@ -30,14 +30,10 @@ import java.util.stream.Stream;
 
 public class SpriteEmojiManager {
     private final Minemoji p;
-
-    // default twemoji is backed by JEmoji;
-    private boolean IS_BASE_EMOJIS_AVAILABLE = false;
-    public boolean baseEmojisAvailable() { return IS_BASE_EMOJIS_AVAILABLE; }
-
-    private final Map<Emoji,ObjectComponent> emojiMap;
-    Map<String, EmojiSet> customPacks;
-    BidiMap<String,Key> customSprites;
+    private final BidiMap<Emoji,ObjectComponent> emojiMap;
+    private final Map<String, EmojiSet> customPacks;
+    private final BidiMap<String,Key> customSprites;
+    private final Map<Key, String> customSpriteDiscord;
 
     public static CompletableFuture<SpriteEmojiManager> fromRemotePacks(Minemoji p, List<URI> packs) {
         p.getLogger().info("Creating emoji manager using remote packs");
@@ -105,13 +101,22 @@ public class SpriteEmojiManager {
         return Collections.unmodifiableMap(map);
     }
 
+    private static Map<Emoji, ObjectComponent> createBaseEmojiSet() {
+        return EmojiManager.getAllEmojis().stream().map(e ->
+                Map.entry(e, Component.object(ObjectContents.sprite(
+                        Key.key("paintings"),
+                        Key.key("unicode/" + StringUtils.joinWith("-", e.getHtmlHexadecimalCode().replace("&#x", "").split(";")).toLowerCase())
+                )))
+        ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+
     protected SpriteEmojiManager(Minemoji p, Map<String, EmojiSet> customPacks) {
         this.p = p;
         p.getLogger().info("Found following packs:" + String.join(", ", customPacks.keySet()));
         if (p.getConfig().getBoolean("unicode-emojis.enabled", true)) {
-            this.emojiMap = createBaseEmojiSet();
-            if (!emojiMap.isEmpty()) { IS_BASE_EMOJIS_AVAILABLE = true; }
-        } else { this.emojiMap = Collections.emptyMap(); }
+            this.emojiMap = new DualHashBidiMap<>(createBaseEmojiSet());
+        } else { this.emojiMap = new DualHashBidiMap<>(); }
 
         this.customPacks = customPacks;
         this.customSprites = new DualHashBidiMap<>(customPacks.entrySet().stream()
@@ -123,6 +128,14 @@ public class SpriteEmojiManager {
                                 ))
                 ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
         );
+
+        this.customSpriteDiscord = customPacks.entrySet().stream()
+                .flatMap(e -> e.getValue().emojis.stream()
+                        .map(m -> Map.entry(
+                                Key.key(m.resource),
+                                m.toDiscordString()
+                        )))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
     }
 
@@ -136,12 +149,15 @@ public class SpriteEmojiManager {
     public Map<Emoji,ObjectComponent> getDefaultEmojiMap() { return Collections.unmodifiableMap(emojiMap); }
     public Map<String, EmojiSet> getCustomPacks() { return Collections.unmodifiableMap(customPacks); }
 
-    public Optional<ObjectComponent> getEmojiFromActual(Emoji emoji) {
+    private Optional<ObjectComponent> getEmojiFromActual(Emoji emoji) {
         return Optional.ofNullable(emojiMap.get(emoji));
     }
 
     public Optional<String> getCustomEmojiBySprite(Key sprite) {
         return Optional.ofNullable(customSprites.getKey(sprite));
+    }
+    public Optional<String> getCustomEmojiDiscordRepresentation(Key sprite) {
+        return Optional.ofNullable(customSpriteDiscord.get(sprite));
     }
     public Optional<ObjectComponent> getCustomEmoji(String key) {
         return Optional.ofNullable(customSprites.get(key))
@@ -149,14 +165,6 @@ public class SpriteEmojiManager {
                         Key.key("paintings"),
                         sprite
                 )));
-    }
-    public Map<Emoji, ObjectComponent> createBaseEmojiSet() {
-        return EmojiManager.getAllEmojis().stream().map(e ->
-                Map.entry(e, Component.object(ObjectContents.sprite(
-                        Key.key("paintings"),
-                        Key.key("unicode/" + StringUtils.joinWith("-", e.getHtmlHexadecimalCode().replace("&#x", "").split(";")).toLowerCase())
-                )))
-        ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     /// Text replacer that replaces unicode sequences with the corresponding emoji sprite
@@ -202,22 +210,23 @@ public class SpriteEmojiManager {
             })
             .build();
 
-    protected Optional<Emoji> getEmojiBySprite(Key sprite) {
-        // 1f0cf -> &#x1f0cf;
-        // 1f1e6-1f1e8 -> &#x1f1e6;&#x1f1e8;
-        var arr = sprite.value().split("/");
-        String trimmedHexCode = arr[arr.length - 1];
-        String hexCode = Arrays.stream(trimmedHexCode.split("-"))
-                .map(str -> "&#x" + str)
-                .collect(Collectors.joining(";")) + ";";
-        return EmojiManager.getByHtmlHexadecimal(hexCode);
+    protected Optional<Emoji> getEmojiByComponent(ObjectComponent component) {
+        return Optional.ofNullable(emojiMap.getKey(component));
     }
     ///  doesnt touch the children. If its an ObjectComponent with a matching sprite key, it will be turned into a
     ///  TextComponent. if it doesnt have a matching key or otherwise, it is left UNTOUCHED!
-    protected Component demojizeSingleComponent(Component component) {
+    public Component demojizeSingleComponent(Component component, boolean discord) {
         if (component instanceof ObjectComponent o && o.contents() instanceof SpriteObjectContents s) {
-            return getCustomEmojiBySprite(s.sprite()).map(str -> (Component) Component.text(":" + str + ":"))
-                    .orElse(getEmojiBySprite(s.sprite())
+            // getPackByPrefix(s.sprite().value().split("/",2)[0])
+            //                    .flatMap(e -> e.emojis.stream()
+            //                            .filter(emoji -> Objects.equals(emoji.resource, s.sprite().value()))
+            //                            .findFirst()
+            //                    )
+            //                    .map(EmojiSet.SpriteMeta::toDiscordString)
+            return (discord ? getCustomEmojiDiscordRepresentation(s.sprite())
+                    : getCustomEmojiBySprite(s.sprite()).map(str -> ":" + str + ":"))
+                    .map(str -> (Component) Component.text(str))
+                    .orElse(getEmojiByComponent(o)
                             .map(e -> e.getDiscordAliases().getFirst())
                             .map(str -> (Component) Component.text(str))
                             .orElse(component) // just use the old one
@@ -226,9 +235,9 @@ public class SpriteEmojiManager {
         return component;
     }
 
-    public Component demojize(Component component) {
-        var childs = component.children().stream().map(this::demojizeSingleComponent).collect(Collectors.toList());
-        return demojizeSingleComponent(component).children(childs);
+    public Component demojize(Component component, boolean discord) {
+        var childs = component.children().stream().map(c -> demojizeSingleComponent(c,discord)).collect(Collectors.toList());
+        return demojizeSingleComponent(component,discord).children(childs);
     }
     public Component emojize(Component component) {
         // try to replace Unicode text emotes
@@ -240,7 +249,7 @@ public class SpriteEmojiManager {
     protected Optional<EmojiSet> getPackByPrefix(String prefix) {
         return Optional.ofNullable(customPacks.get(prefix));
     }
-    public Optional<ObjectComponent> getNamespacedCustomEmoji(String identifier) {
+    protected Optional<ObjectComponent> getNamespacedCustomEmoji(String identifier) {
         // search a pack for an emoji rather than pucking out of an alias map.
         // requires format :packName--emoji: !
         var _arr =identifier.split("--", 2);

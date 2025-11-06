@@ -59,6 +59,8 @@ File names will be taken as sprite names.
 In the input directory, if you put files ending with `.info` corresponding to the
 emotes, i.e.: `ralsei_spin.gif` and `ralsei_spin.gif.info`, you can change:
 - The max frame rate of an animated emote (the default and **absolute** max is 20)
+  - This is done with line entries beginning with `f` i.e.: `f10`
+- The discord ID of an emote (and if )
 
 # license
 

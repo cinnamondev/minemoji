@@ -33,6 +33,7 @@ dependencies {
     implementation("org.apache.xmlgraphics:batik-transcoder:1.19")
     implementation("org.apache.xmlgraphics:batik-codec:1.19")
     implementation("commons-cli:commons-cli:1.10.0")
+    implementation("org.apache.commons:commons-lang3:3.19.0")
 }
 
 group = "com.github.cinnamondev"
@@ -55,6 +56,7 @@ tasks {
     runServer {
         downloadPlugins {
             modrinth("discordsrv", "1.30.2") //  for discordsrv integration testing.
+            modrinth("luckperms", "v5.5.17-bukkit")
         }
         runDirectory.set(layout.buildDirectory.dir("run"))
         minecraftVersion("1.21.10")
