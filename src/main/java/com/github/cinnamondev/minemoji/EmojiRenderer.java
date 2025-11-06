@@ -12,10 +12,10 @@ import org.jetbrains.annotations.NotNull;
 
 
 public class EmojiRenderer implements Listener, io.papermc.paper.chat.ChatRenderer {
-    private final SpriteEmojiManager manager;
+    private final Minemoji p;
     private final boolean discordSrv;
-    public EmojiRenderer(SpriteEmojiManager manager, boolean discordSrvEnabled) {
-        this.manager = manager;
+    public EmojiRenderer(Minemoji p, boolean discordSrvEnabled) {
+        this.p = p;
         this.discordSrv = discordSrvEnabled;
     }
 
@@ -24,7 +24,7 @@ public class EmojiRenderer implements Listener, io.papermc.paper.chat.ChatRender
         if (discordSrv) {
             // makes reverse emoji lookup simpler
             e.message(
-                    manager.emojize(e.message())
+                    p.getEmoteManager().emojize(e.message())
             );
         } else {
             e.renderer(this);
@@ -37,6 +37,6 @@ public class EmojiRenderer implements Listener, io.papermc.paper.chat.ChatRender
         if (!source.hasPermission("minemoji.emoji")) {
             return ChatRenderer.defaultRenderer().render(source, sourceDisplayName, message, viewer);
         }
-        return ChatRenderer.defaultRenderer().render(source, sourceDisplayName, manager.emojize(message), viewer);
+        return ChatRenderer.defaultRenderer().render(source, sourceDisplayName, p.getEmoteManager().emojize(message), viewer);
     }
 }

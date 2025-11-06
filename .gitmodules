@@ -1,3 +1,4 @@
 [submodule "twemoji"]
 	path = twemoji
 	url = git@github.com:jdecked/twemoji.git
+	branch = gh-pages

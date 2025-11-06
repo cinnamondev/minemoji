@@ -37,7 +37,7 @@ dependencies {
 }
 
 group = "com.github.cinnamondev"
-version = "1.03"
+version = "1.1"
 description = "minemoji"
 
 java {
@@ -79,6 +79,10 @@ paperPluginYaml {
         register("minemoji.list") {
             description = "List emojis using /minemoji list <pack>"
             default = Permission.Default.TRUE
+        }
+        register("minemoji.reload") {
+            description = "Reload emojis"
+            default = Permission.Default.OP
         }
     }
 }

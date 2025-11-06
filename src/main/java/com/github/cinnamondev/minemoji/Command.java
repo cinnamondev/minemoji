@@ -29,8 +29,9 @@ public class Command {
     private List<Component> defaultPackPages = Collections.emptyList();
 
     public void registerCustomPacks(Map<String, EmojiSet> packs) {
-        this.packPages = packs.entrySet().stream().map(e ->
-                Map.entry(e.getKey(),
+        this.packPages = packs.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> Map.entry(e.getKey(),
                         paginateComponents(e.getValue().emojis.stream()
                                 .map(emote -> emoteWithLore(
                                         SpriteEmojiManager.spriteMetaToComponent(emote),
@@ -42,6 +43,7 @@ public class Command {
     public void registerDefaultPack(Map<Emoji, ObjectComponent> pack) {
         this.defaultPackPages = paginateComponents(
                 pack.entrySet().stream()
+                        .sorted(Comparator.comparing(e -> e.getKey().getGroup()))
                         .filter(e -> !e.getKey().getDiscordAliases().isEmpty())
                         .map(e -> emoteWithLore(e.getValue(), e.getKey().getDiscordAliases().getFirst()))
                         .toList(),
@@ -104,6 +106,9 @@ public class Command {
                             return 1;
                         })
                 )
+                .then(Commands.literal("reload")
+                        .requires(src -> src.getSender().hasPermission("minemoji.reload"))
+                        .executes(this::reloadCommand))
                 .then(Commands.literal("help").executes(Command::helpCommand))
                 .executes(Command::helpCommand)
                 .build();
@@ -179,6 +184,16 @@ public class Command {
                 .append(Component.text(" " + currentPage + "/" + totalPages + " ").color(NamedTextColor.YELLOW))
                 .append(nextPage);
 
+    }
+
+    private int reloadCommand(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        try {
+            p.blockingLoad();
+        } catch (Exception e) {
+            p.getLogger().severe(e.getMessage());
+            ctx.getSource().getSender().sendMessage(Component.text("Failed to load reload; see console.").color(NamedTextColor.RED));
+        }
+        return 1;
     }
     private static int helpCommand(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         context.getSource().getSender().sendMessage(Component.text("""

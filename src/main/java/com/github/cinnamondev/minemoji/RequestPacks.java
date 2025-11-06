@@ -63,6 +63,10 @@ public class RequestPacks implements Listener {
     protected RequestPacks(Minemoji p, List<ResourcePackInfo> packs) {
         this.p = p;
         this.packs = packs;
+        p.getLogger().info("Additional resource packs to fetch:");
+        packs.forEach(pack -> {
+            p.getLogger().info(pack.uri().toString());
+        });
         String miniMessage= p.getConfig().getString("join-prompt");
         if (miniMessage != null && !miniMessage.isEmpty()) {
             MiniMessage mm = MiniMessage.miniMessage();
@@ -76,6 +80,11 @@ public class RequestPacks implements Listener {
     }
 
     private final HashMap<UUID, CountDownLatch> waitingConfigurationThreads = new HashMap<>();
+
+    public void unregister() {
+        AsyncPlayerConnectionConfigureEvent.getHandlerList().unregister(this);
+        PlayerConnectionCloseEvent.getHandlerList().unregister(this);
+    }
 
     @EventHandler
     public void serveEmojiPacks(AsyncPlayerConnectionConfigureEvent e) throws InterruptedException {

@@ -2,18 +2,13 @@ package com.github.cinnamondev.minemoji;
 
 import github.scarsz.discordsrv.api.Subscribe;
 import github.scarsz.discordsrv.api.events.*;
-import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.Component;
 
-import java.util.regex.Pattern;
-
 public class DiscordIntegration {
-    private final SpriteEmojiManager manager;
     private final Minemoji p;
-    public DiscordIntegration(Minemoji p, SpriteEmojiManager emojiManager) {
+    public DiscordIntegration(Minemoji p) {
         this.p = p;
-        this.manager = emojiManager;
     }
 
     // HATE HATE!!!!
@@ -34,7 +29,7 @@ public class DiscordIntegration {
     @Subscribe
     public void onMessageSent(DiscordGuildMessagePreBroadcastEvent e) {
         e.setMessage(toShaded(
-                manager.emojize(fromShaded(e.getMessage()))
+                p.getEmoteManager().emojize(fromShaded(e.getMessage()))
         ));
         // This is janky,, we are stopping discordsrv from broadcasting so we can do it instead. prevents weirdness with
         // components.
@@ -49,7 +44,7 @@ public class DiscordIntegration {
     //        .build();
     @Subscribe
     public void onMessageReceived(GameChatMessagePreProcessEvent e) {
-        Component demojized = manager.demojize(fromShaded(e.getMessageComponent()), true);
+        Component demojized = p.getEmoteManager().demojize(fromShaded(e.getMessageComponent()), true);
         //demojized = demojized.replaceText(PREFIXED_EMOTE_REPLACER); //  MAKE QUADRUPLE SURE!
 
         e.setMessageComponent(toShaded(demojized));

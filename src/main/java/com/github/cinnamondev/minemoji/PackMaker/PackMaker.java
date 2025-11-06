@@ -10,7 +10,6 @@ import org.apache.commons.cli.*;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.metadata.IIOMetadata;
@@ -372,6 +371,7 @@ public class PackMaker {
         List<String> endings = Arrays.stream(ImageIO.getReaderFileSuffixes()).toList();
         ArrayList<EmojiSet.SpriteMeta> emojis = new ArrayList<>();
         for (File file : args.inputDirectory.listFiles()) {
+            if (file.getName().endsWith(".info")) { continue; }
             String baseString = file.getName().substring(0, file.getName().lastIndexOf('.')).toLowerCase();
             String resourceName = baseString.replace('~', '-');
             String fileEnding = file.getName().substring(file.getName().lastIndexOf('.') + 1);

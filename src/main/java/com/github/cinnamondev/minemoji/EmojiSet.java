@@ -14,8 +14,8 @@ public class EmojiSet {
             this.animated = animated;
             this.snowflake = snowflake;
         }
-        public boolean animated;
-        public long snowflake;
+        public boolean animated = false;
+        public long snowflake = -1;
         public String emojiText;
         public String resource;
         //public String[] aliases;

@@ -8,11 +8,11 @@ Animated sprites supported, will work with DiscordSRV (translate the discord emo
 
 https://github.com/user-attachments/assets/404500c4-36d6-4563-a049-5e0031ad3cd0
 
-### Note on DiscordSRV integration
+## Permissions
 
-I don't think this would play very nice with other plugins that hook into
-the post-process events of DiscordSRV (at the moment). Todo for ways to inserting objectcomponents into discordsrv messages.
-
+- `minemoji.emoji`: Use emotes (defaults to `true`)
+- `minemoji.list`: List emotes (defaults to `true`)
+- `minemoji.reload`: Reload packs (defaults to `OP`)
 ## Config
 
 ```
@@ -60,7 +60,9 @@ In the input directory, if you put files ending with `.info` corresponding to th
 emotes, i.e.: `ralsei_spin.gif` and `ralsei_spin.gif.info`, you can change:
 - The max frame rate of an animated emote (the default and **absolute** max is 20)
   - This is done with line entries beginning with `f` i.e.: `f10`
-- The discord ID of an emote (and if )
+- The discord ID of an emote (and if applicable, prefixed with `a` if animated)
+  - i.e: `trans_bee.png.info` containing `1031671707762688060`
+  - `ralsei_spin.gif.info` containing `a1427385442843758682`
 
 # license
 

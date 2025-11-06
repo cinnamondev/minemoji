@@ -8,15 +8,45 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 
 public final class Minemoji extends JavaPlugin {
     public static final URI DEFAULT_URI = URI.create("https://cinnamondev.github.io/minemoji/packs/twemoji-latest.zip");
     private Command command;
     public DiscordIntegration discord = null;
+    private RequestPacks packListener = null;
+    private EmojiRenderer renderer = null;
+    private DiscordIntegration discordIntegration = null;
+    private SpriteEmojiManager manager = null;
+    public SpriteEmojiManager getEmoteManager() {
+        return manager;
+    }
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        // Plugin startup logic
+
+        this.command = new Command(this);
+        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands ->
+                commands.registrar().register(command.command())
+        );
+
+        this.renderer = new EmojiRenderer(this, getServer().getPluginManager().isPluginEnabled("DiscordSRV"));
+        getServer().getPluginManager().registerEvents(renderer, this);
+        if (getServer().getPluginManager().isPluginEnabled("DiscordSRV")) {
+            this.discordIntegration = new DiscordIntegration(this);
+            DiscordSRV.api.subscribe(this.discordIntegration);
+        }
+
+        blockingLoad();
+
+    }
+
+    public CompletableFuture<SpriteEmojiManager> loadManager() {
+        this.manager = null; // reloads will always be dangerous because we dont check if something is USING manager right then.
+
+        if (packListener != null) { packListener.unregister(); }
+
         CompletableFuture<SpriteEmojiManager> managerFuture;
         if (!getConfig().getBoolean("custom-packs.download", false)) {
             managerFuture = CompletableFuture.completedFuture(
@@ -31,66 +61,46 @@ public final class Minemoji extends JavaPlugin {
                 try {
                     uris.add(new URI(s));
                 } catch (URISyntaxException e) {
-                    getComponentLogger().warn("Malformed URI " + s + " in custom packs list.");
+                    getComponentLogger().warn("Malformed URI {} in custom packs list.", s);
                 }
             }
             managerFuture = SpriteEmojiManager.fromRemotePacks(this, uris);
         }
 
-        managerFuture.thenAccept(m -> {})
-                .exceptionally(ex -> {
-                    getLogger().warning("Couldn't make sprite manager, plugin will be dud!\n" + ex.getMessage());
-                    return null;
-                });
-
-        if (getConfig().getBoolean("serve-packs", true)) {
-            managerFuture.thenComposeAsync(manager -> {
-                        try {
-                            return RequestPacks.requestPacks(this, manager);
-                        } catch (URISyntaxException e) {
-                            throw new RuntimeException(e);
-                        }
-                    })
-                    .thenAccept(listener -> getServer().getPluginManager().registerEvents(listener, this))
-                    .exceptionally(ex -> {
-                        getComponentLogger().warn("Couldn't make pack listener, see:", ex);
-                        return null;
-                    });
-        }
-
-        managerFuture.thenApply(m -> new EmojiRenderer(m, getServer().getPluginManager().isPluginEnabled("DiscordSRV")))
-                .thenAccept(listener -> getServer().getPluginManager().registerEvents(listener, this))
-                .exceptionally(ex -> {
-                    getComponentLogger().warn("Couldn't attach emoji chat renderer, see:",ex);
-                    return null;
-                });
-
-        if (getServer().getPluginManager().isPluginEnabled("DiscordSRV")) {
-            managerFuture.thenApply(manager -> new DiscordIntegration(this, manager))
-                    .thenAccept(integration -> {
-                        this.discord = integration;
-                        DiscordSRV.api.subscribe(integration);
-                    })
-                    .exceptionally(ex -> {
-                        getComponentLogger().warn("Couldn't start DiscordSRV integration: ", ex);
-                        return null;
-                    });
-        }
-
-        this.command = new Command(this);
-        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, commands ->
-                commands.registrar().register(command.command())
-        );
-
-        managerFuture
-                .thenAccept(manager -> {
+        return managerFuture
+                .thenApply(m -> {
+                    this.manager = m;
                     command.registerCustomPacks(manager.getCustomPacks());
                     command.registerDefaultPack(manager.getDefaultEmojiMap());
-                })
-                .exceptionally(ex -> {
-                    getComponentLogger().warn("Couldn't register packs to command... ", ex);
-                    return null;
+                    return m;
                 });
+    }
+
+    public void blockingLoad() {
+        try {
+            var managerFuture = loadManager().orTimeout(2, TimeUnit.MINUTES);
+            CompletableFuture<Void> packListenerFuture;
+            if (getConfig().getBoolean("serve-packs", true)) {
+                packListenerFuture = managerFuture.thenComposeAsync(manager -> {
+                    try {
+                        return RequestPacks.requestPacks(this, manager);
+                    } catch (URISyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).thenAccept(listener -> {
+                    this.packListener = listener;
+                    getServer().getPluginManager().registerEvents(listener, this);
+                });
+            } else {
+                packListenerFuture = CompletableFuture.completedFuture(null);
+            }
+
+            CompletableFuture.allOf(packListenerFuture, managerFuture).join();
+        } catch (CompletionException e) {
+            getLogger().severe("Manager or pack listener couldn't be loaded; You're on your own.");
+            getLogger().throwing("minemoji", "onenable", e);
+            throw e;
+        }
     }
 
     @Override
