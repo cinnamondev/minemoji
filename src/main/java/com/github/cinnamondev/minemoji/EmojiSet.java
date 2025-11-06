@@ -21,7 +21,7 @@ public class EmojiSet {
         //public String[] aliases;
 
         public String toDiscordString() {
-            if (snowflake != -1) { // snowflake is known
+            if (snowflake > 0) { // snowflake is known
                 return "<" + (animated ? "a" : "") + ":" + emojiText + ":" + snowflake + ">";
             } else {
                 return ":" + emojiText + ":";
