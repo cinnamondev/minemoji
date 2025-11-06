@@ -121,3 +121,6 @@ for b in ${arr[@]}; do
   #echo "Hi! ${b}"
   mv "${EMOTE_DIRECTORY}/${b}${EXTENSION}" "${EMOTE_DIRECTORY}/${b}-fe0f${EXTENSION}"
 done
+
+# snuff out error codes
+exit 0
