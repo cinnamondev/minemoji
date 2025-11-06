@@ -20,7 +20,7 @@ jobs:
         - name: Setup Gradle
           uses: gradle/actions/setup-gradle@v5
           with:
-            gradle-version: '9.20'
+            gradle-version: '9.10'
         - name: Build with Gradle
           run: gradle build
         - name: Rename relase
