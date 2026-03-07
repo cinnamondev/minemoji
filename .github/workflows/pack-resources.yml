@@ -21,7 +21,7 @@ jobs:
           uses: robinraju/release-downloader@v1
           with:
             latest: true
-            fileName: 'minemoji-*.jar'
+            fileName: 'minemoji.jar'
             tarBall: false
             zipBall: false
         - uses: actions/setup-java@v5
@@ -29,7 +29,7 @@ jobs:
             distribution: 'temurin' # See 'Supported distributions' for available options
             java-version: '21'
         - run: >
-            java -cp minemoji-*.jar com.github.cinnamondev.minemoji.PackMaker.PackMaker 
+            java -cp minemoji.jar com.github.cinnamondev.minemoji.PackMaker.PackMaker 
             --input-directory ./sample_pack/
             --output-directory ./site/packs/minemoji-latest
             --prefix minemoji
@@ -38,7 +38,7 @@ jobs:
         - run: df -h
         - run: ./rename-twemoji.sh
         - run: >
-            java -cp minemoji-*.jar com.github.cinnamondev.minemoji.PackMaker.PackMaker 
+            java -cp minemoji.jar com.github.cinnamondev.minemoji.PackMaker.PackMaker 
             --input-directory ./twemoji/v/latest/72x72
             --output-directory ./site/packs/twemoji-latest
             --width 48
