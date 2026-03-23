@@ -35,7 +35,8 @@ public class UnicodeEmojiSet implements EmojiSet {
                 ));
     }
     public SpriteMeta findByEmote(Emoji emoji) {
-        return new SpriteMeta(emojiTable.getKey(emoji), "unicode", false);
+        String str = emojiTable.getKey(emoji);
+        return new SpriteMeta(emoji.getDiscordAliases().getFirst(), "unicode/" + str, false);
     }
 
     @Override
