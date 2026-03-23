@@ -33,7 +33,7 @@ jobs:
             --input-directory ./sample_pack/
             --output-directory ./site/packs/minemoji-latest
             --prefix minemoji
-            --pack-url https://cinnamondev.github.io/minemoji/packs/minemoji-latest.zip
+            --pack-url https://itscinnamon.dev/minemoji/packs/minemoji-latest.zip
             --zip-pack --delete-directory
         - run: df -h
         - run: ./rename-twemoji.sh
@@ -44,7 +44,7 @@ jobs:
             --width 48
             --prefix unicode
             --skip-packgen
-            --pack-url https://cinnamondev.github.io/minemoji/packs/twemoji-latest.zip
+            --pack-url https://itscinnamon.dev/minemoji/packs/twemoji-latest.zip
             --zip-pack --delete-directory
         - name: serve example json
           run: cp ./minemoji/packs/minemoji.json ./site/packs/minemoji-latest.json
