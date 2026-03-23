@@ -75,6 +75,8 @@ public class DiscordIntegration {
             String family = mr.group(2);
             String emote = mr.group(3);
 
+            p.getLogger().info(family);
+            p.getLogger().info(emote);
             return p.getEmoteManager().findEmojiSet(family)
                     .flatMap(set -> set instanceof UnicodeEmojiSet ues
                             ? ues.tryFindByKey(key) // try to use "unicode/hjjh3433" or whatever processor.

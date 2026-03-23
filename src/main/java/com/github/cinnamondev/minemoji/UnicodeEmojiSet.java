@@ -36,7 +36,7 @@ public class UnicodeEmojiSet implements EmojiSet {
     }
     public SpriteMeta findByEmote(Emoji emoji) {
         String str = emojiTable.getKey(emoji);
-        return new SpriteMeta(emoji.getDiscordAliases().getFirst(), "unicode/" + str, false);
+        return new SpriteMeta(emoji.getDiscordAliases().getFirst().replace(":", ""), "unicode/" + str, false);
     }
 
     @Override
@@ -71,10 +71,10 @@ public class UnicodeEmojiSet implements EmojiSet {
 
     @Override
     public Optional<SpriteMeta> tryFindByKey(Key key) {
-        var arr = key.value().splitWithDelimiters("/",1);
-        if (arr.length != 2) { return Optional.empty(); }
+        var arr = key.value().splitWithDelimiters("/",2);
+        if (arr.length != 3) { return Optional.empty(); }
         String family = arr[0];
-        String hex = arr[1];
+        String hex = arr[2];
 
         if (!family.equalsIgnoreCase("unicode")) {
             return Optional.empty();
