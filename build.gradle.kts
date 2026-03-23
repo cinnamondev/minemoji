@@ -6,7 +6,7 @@ plugins {
     id("xyz.jpenilla.run-paper") version "2.3.1"
     id("xyz.jpenilla.resource-factory-paper-convention") version "1.3.1"
     //id("io.papermc.paperweight.userdev") version "2.0.0-beta.19"
-    id("com.gradleup.shadow") version "9.2.2"
+    id("com.gradleup.shadow") version "9.4.0"
 }
 
 repositories {
@@ -25,6 +25,7 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
     compileOnly("com.discordsrv:discordsrv:1.30.2")
+    implementation("net.kyori:adventure-api:4.26.1")
     implementation("net.fellbaum:jemoji:1.7.5")
     implementation("org.apache.commons:commons-collections4:4.4")
     // Requirements for PackMaker (this is probably where the bulk of the Jar file comes from)
