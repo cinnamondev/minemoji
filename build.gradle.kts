@@ -23,7 +23,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.10-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
     compileOnly("com.discordsrv:discordsrv:1.30.2")
     implementation("net.fellbaum:jemoji:1.7.5")
     implementation("org.apache.commons:commons-collections4:4.4")
@@ -37,7 +37,7 @@ dependencies {
 }
 
 group = "com.github.cinnamondev"
-version = "1.1"
+version = "1.3"
 description = "minemoji"
 
 java {
@@ -55,11 +55,11 @@ tasks {
     }
     runServer {
         downloadPlugins {
-            modrinth("discordsrv", "1.30.2") //  for discordsrv integration testing.
+            modrinth("discordsrv", "1.30.4") //  for discordsrv integration testing.
             modrinth("luckperms", "v5.5.17-bukkit")
         }
         runDirectory.set(layout.buildDirectory.dir("run"))
-        minecraftVersion("1.21.10")
+        minecraftVersion("1.21.11")
     }
 }
 
@@ -67,6 +67,7 @@ tasks {
 paperPluginYaml {
     main = "com.github.cinnamondev.minemoji.Minemoji"
     apiVersion = "1.21"
+    website = "https://github.com/cinnamondev/minemoji"
     authors.add("cinnamondev")
     dependencies {
         server("DiscordSRV", PaperPluginYaml.Load.BEFORE, false)
@@ -79,6 +80,10 @@ paperPluginYaml {
         register("minemoji.list") {
             description = "List emojis using /minemoji list <pack>"
             default = Permission.Default.TRUE
+        }
+        register("minemoji.tellraw") {
+            description = "Easily emojify a tellraw snbt component"
+            default = Permission.Default.OP
         }
         register("minemoji.reload") {
             description = "Reload emojis"

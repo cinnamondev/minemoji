@@ -9,6 +9,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.checkerframework.checker.units.qual.N;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -20,23 +22,24 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public class RequestPacks implements Listener {
-    public static CompletableFuture<RequestPacks> requestPacks(Minemoji p, SpriteEmojiManager emojiManager) throws URISyntaxException {
-        ArrayList<CompletableFuture<ResourcePackInfo>> futures =
-                emojiManager.getCustomPacks().values().parallelStream()
-                        .filter(pack -> pack.serveToClient)
-                        .map(e -> ResourcePackInfo.resourcePackInfo()
-                                .uri(e.url)
-                                .id(UUID.nameUUIDFromBytes(e.prefix.getBytes()))
-                                .computeHashAndBuild()
-                        ).collect(Collectors.toCollection(ArrayList::new));
+    public static CompletableFuture<RequestPacks> requestPacks(Minemoji p, @Nullable List<EmojiSet> emoteSets, @Nullable UnicodeEmojiSet unicodeEmojiSet) {
+        ArrayList<CompletableFuture<ResourcePackInfo>> futures;
+        if (emoteSets != null) {
+            futures = emoteSets.parallelStream()
+                    .filter(set -> set.uri() != null)
+                    .map(set -> ResourcePackInfo.resourcePackInfo()
+                            .uri(set.uri())
+                            .id(UUID.nameUUIDFromBytes(set.prefix().getBytes()))
+                            .computeHashAndBuild() // TODO: we should compute our own hash so we can change the url to serve (for redirects)
+                    ).collect(Collectors.toCollection(ArrayList::new));
+        } else {
+            futures = new ArrayList<>();
+        }
 
-        if (p.getConfig().getBoolean("unicode-emojis.enabled", true)) {
-            String defaultPack = p.getConfig().getString("unicode-emojis.uri");
-            URI uri;
-            if (defaultPack == null) { uri = Minemoji.DEFAULT_URI; } else { uri = new URI(defaultPack); }
+        if (unicodeEmojiSet != null && unicodeEmojiSet.uri() != null) {
             futures.add(
                     ResourcePackInfo.resourcePackInfo()
-                            .uri(uri)
+                            .uri(unicodeEmojiSet.uri())
                             .id(UUID.nameUUIDFromBytes("unicode-emojis".getBytes()))
                             .computeHashAndBuild()
             );
@@ -44,12 +47,10 @@ public class RequestPacks implements Listener {
 
         if (futures.isEmpty()) {
             p.getComponentLogger().warn("No resource packs to serve.");
-            return CompletableFuture.completedFuture(new RequestPacks(
-                    p, Collections.emptyList()
-            ));
+            return CompletableFuture.completedFuture(null);
         }
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
-                .thenApply(_v -> new RequestPacks(
+                .thenApplyAsync(_v -> new RequestPacks(
                         p,
                         futures.stream()
                                 .map(CompletableFuture::join)
@@ -74,10 +75,8 @@ public class RequestPacks implements Listener {
         } else {
             joinPrompt = null;
         }
-
-
-
     }
+
 
     private final HashMap<UUID, CountDownLatch> waitingConfigurationThreads = new HashMap<>();
 

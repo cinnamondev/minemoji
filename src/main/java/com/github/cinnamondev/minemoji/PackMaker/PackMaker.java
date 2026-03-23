@@ -1,6 +1,6 @@
 package com.github.cinnamondev.minemoji.PackMaker;
 
-import com.github.cinnamondev.minemoji.EmojiSet;
+import com.github.cinnamondev.minemoji.CustomEmojiSet;
 import com.google.gson.Gson;
 import org.apache.batik.transcoder.TranscoderException;
 import org.apache.batik.transcoder.TranscoderInput;
@@ -344,15 +344,15 @@ public class PackMaker {
         if (!packJsonDirectory.toFile().exists() && args.createPackInfo) { packJsonDirectory.toFile().mkdirs(); }
 
         Gson gson = new Gson();
-        EmojiSet set;
+        CustomEmojiSet set;
         File jsonFile = packJsonDirectory.resolve(args.prefix + ".json").toFile();
         if (jsonFile.exists() && args.createPackInfo) {
             try (BufferedReader br = new BufferedReader(new FileReader(jsonFile))) {
-                set = gson.fromJson(br, EmojiSet.class);
+                set = gson.fromJson(br, CustomEmojiSet.class);
                 set.packVersion += 1;
             }
         } else {
-            set = new EmojiSet();
+            set = new CustomEmojiSet();
             set.packVersion = 1;
         }
         set.prefix = args.prefix;
@@ -369,7 +369,7 @@ public class PackMaker {
         var gifReader = ImageIO.getImageReadersByFormatName("gif").next();
 
         List<String> endings = Arrays.stream(ImageIO.getReaderFileSuffixes()).toList();
-        ArrayList<EmojiSet.SpriteMeta> emojis = new ArrayList<>();
+        ArrayList<CustomEmojiSet.SpriteMeta> emojis = new ArrayList<>();
         for (File file : args.inputDirectory.listFiles()) {
             if (file.getName().endsWith(".info")) { continue; }
             String baseString = file.getName().substring(0, file.getName().lastIndexOf('.')).toLowerCase();
@@ -394,16 +394,17 @@ public class PackMaker {
             String spriteName = baseString.replace('.', '-');
             if (args.createPackInfo) {
                 if (info.isNonStandard()) {
-                    emojis.add(new EmojiSet.SpriteMeta(
+                    emojis.add(new CustomEmojiSet.SpriteMeta(
                             baseString.replace('.', '-'),
                             args.prefix + "/" + resourceName,
                             info.snowflake,
                             info.isAnimated
                     ));
                 } else {
-                    emojis.add(new EmojiSet.SpriteMeta(
+                    emojis.add(new CustomEmojiSet.SpriteMeta(
                             baseString.replace('.', '-'),
-                            args.prefix + "/" + resourceName
+                            args.prefix + "/" + resourceName,
+                            false
                     ));
                 }
             }

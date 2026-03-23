@@ -9,34 +9,33 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.NonNull;
 
 
-public class EmojiRenderer implements Listener, io.papermc.paper.chat.ChatRenderer {
+public class EmojiRenderer implements Listener {//, io.papermc.paper.chat.ChatRenderer {
     private final Minemoji p;
-    private final boolean discordSrv;
-    public EmojiRenderer(Minemoji p, boolean discordSrvEnabled) {
-        this.p = p;
-        this.discordSrv = discordSrvEnabled;
-    }
+    public EmojiRenderer(Minemoji p) { this.p = p; }
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onChat(AsyncChatEvent e) {
-        if (discordSrv) {
-            // makes reverse emoji lookup simpler
+        //if (discordSrv) {
+        //    // makes reverse emoji lookup simpler
+        //    e.message(
+        //            p.getEmoteManager().emojize(e.message())
+        //    );
+        //} else {
+        if (e.getPlayer().hasPermission("minemoji.emoji")) {
+            //e.renderer(this);
             e.message(
                     p.getEmoteManager().emojize(e.message())
             );
-        } else {
-            e.renderer(this);
         }
+        //}
         //
     }
 
-    @Override
-    public @NotNull Component render(Player source, @NotNull Component sourceDisplayName, @NotNull Component message, @NotNull Audience viewer) {
-        if (!source.hasPermission("minemoji.emoji")) {
-            return ChatRenderer.defaultRenderer().render(source, sourceDisplayName, message, viewer);
-        }
-        return ChatRenderer.defaultRenderer().render(source, sourceDisplayName, p.getEmoteManager().emojize(message), viewer);
-    }
+    //@Override
+    //public @NotNull Component render(@NonNull Player source, @NotNull Component sourceDisplayName, @NotNull Component message, @NotNull Audience viewer) {
+    //    return ChatRenderer.defaultRenderer().render(source, sourceDisplayName, p.getEmoteManager().emojize(message), viewer);
+    //}
 }
