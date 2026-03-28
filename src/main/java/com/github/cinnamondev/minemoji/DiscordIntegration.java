@@ -47,9 +47,16 @@ public class DiscordIntegration {
 
     @Subscribe
     public void emojizeDiscordMessage(DiscordGuildMessagePostProcessEvent e) {
-        e.setMinecraftMessage(toShaded(
-                p.getEmoteManager().emojize(fromShaded(e.getMinecraftMessage()))
-        ));
+        if (!p.getConfig().getBoolean("discord.disable-override", false)) {
+            p.getServer().sendMessage(
+                    p.getEmoteManager().emojize(fromShaded(e.getMinecraftMessage()))
+            );
+            e.setCancelled(true);
+        } else {
+            e.setMinecraftMessage(toShaded(
+                    p.getEmoteManager().emojize(fromShaded(e.getMinecraftMessage()))
+            ));
+        }
     }
     ///  Text replacer that replaces prefixed emotes :identifier--sprite: with their corresponding emoji
     ///  (has to search rather than map lookup)
@@ -75,8 +82,6 @@ public class DiscordIntegration {
             String family = mr.group(2);
             String emote = mr.group(3);
 
-            p.getLogger().info(family);
-            p.getLogger().info(emote);
             return p.getEmoteManager().findEmojiSet(family)
                     .flatMap(set -> set instanceof UnicodeEmojiSet ues
                             ? ues.tryFindByKey(key) // try to use "unicode/hjjh3433" or whatever processor.

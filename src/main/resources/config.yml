@@ -10,3 +10,6 @@ custom-packs: # Packs can be placed in either minemoji/packs or put in the follo
 enforce-pack: true
 # use minimessage!  :) remove entry to disable prompt
 join-prompt: "This server uses resource pack to allow players to use emotes in gamechat :) <click:open_url:'https://github.com/cinnamondev/minemoji'><u><b><aqua>About</aqua></b></u></click>"
+
+discord: # Default behaviour is to override discordsrv sending messages.
+  disable-override: false
