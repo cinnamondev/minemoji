@@ -56,7 +56,7 @@ tasks {
 
         dependencies {
             // Only merge bStats into the final jar, no other dependencies
-            exclude { it.moduleGroup != "org.bstats" }
+            //exclude { it.moduleGroup != "org.bstats" }
         }
 
         // Relocate bStats into the plugin's package to avoid conflicts with other
