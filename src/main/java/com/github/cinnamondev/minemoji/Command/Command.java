@@ -4,18 +4,14 @@ import com.github.cinnamondev.minemoji.EmojiSet;
 import com.github.cinnamondev.minemoji.Minemoji;
 import com.github.cinnamondev.minemoji.UnicodeEmojiSet;
 import com.google.common.collect.Lists;
-import com.mojang.brigadier.arguments.ArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
-import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
-import net.fellbaum.jemoji.EmojiGroup;
 import net.fellbaum.jemoji.EmojiManager;
 import net.fellbaum.jemoji.EmojiSubGroup;
 import net.kyori.adventure.text.Component;
@@ -47,11 +43,12 @@ public class Command {
                                         .executes(this::tellRaw))))
                 .then(Commands.literal("pack")
                         .requires(src -> src.getSender().hasPermission("minemoji.list"))
-                        .then(Commands.literal("unicode")
-                                .then(Commands.argument("group", new UnicodeSubGroup())
-                                        .executes(this::unicodeListing)))
                         .then(Commands.argument("set", new PackArgument(p))
-                                .then(Commands.literal("emotes").executes(this::packEmoteListing))
+                                .then(Commands.literal("emotes")
+                                        .then(Commands.argument("page", IntegerArgumentType.integer(0,1000))
+                                                .executes(this::packEmotePage))
+                                        .executes(this::packEmoteFirstPage)
+                                )
                                 .then(Commands.literal("about").executes(this::packDefaultExecutor))
                                 .executes(this::packDefaultExecutor)
                         ))
@@ -99,24 +96,53 @@ public class Command {
         return 1;
     }
 
-    int packEmoteListing(CommandContext<CommandSourceStack> ctx) {
+    int packEmoteFirstPage(CommandContext<CommandSourceStack> ctx) {
         final EmojiSet set = ctx.getArgument("set", EmojiSet.class);
-        Component emoteCollection = collectComponents(
-                set.allEmotes().stream()
-                        .map(meta -> (Component) meta.componentWithContextualLore(set))
-                        .toList(),
-                40
-        );
+
+        ctx.getSource().getSender().sendMessage(formatPage(set,0));
+
+        return 1;
+    }
+    int packEmotePage(CommandContext<CommandSourceStack> ctx) {
+        final EmojiSet set = ctx.getArgument("set", EmojiSet.class);
+        final int page =  ctx.getArgument("page", Integer.class);
 
         ctx.getSource().getSender().sendMessage(
-                Component.text("All emotes in: " + set.prefix())
-                        .style(Style.style(NamedTextColor.LIGHT_PURPLE))
-                        .appendNewline()
-                        .append(emoteCollection.color(NamedTextColor.WHITE))
+                formatPage(set, page)
         );
 
         return 1;
     }
+
+    private static final Component DISABLED_NEXT_PAGE = Component.text("[ >> ]")
+            .style(Style.style(TextDecoration.BOLD, NamedTextColor.GRAY));
+    private static final Component DISABLED_PREV_PAGE = Component.text("[ << ]")
+            .style(Style.style(TextDecoration.BOLD, NamedTextColor.GRAY));
+    Component formatPage(EmojiSet set, int page) {
+        var pages = set.fetchPage(page, 10, 10);
+        if (pages.isPresent()) {
+            var p = pages.get();
+            Component backButton = page != 0
+                    ? Component.text("[ << ]")
+                    .style(Style.style(TextDecoration.BOLD, NamedTextColor.BLUE))
+                    .clickEvent(ClickEvent.runCommand("minemoji pack " + set.prefix() + " emotes " + (page-1)))
+                    : DISABLED_PREV_PAGE;
+            Component nextButton = pages.get().getValue()
+                    ? Component.text("[ >> ]")
+                    .style(Style.style(TextDecoration.BOLD, NamedTextColor.BLUE))
+                    .clickEvent(ClickEvent.runCommand("minemoji pack " + set.prefix() + " emotes " + (page +1)))
+                    : DISABLED_NEXT_PAGE;
+            return Component.join(JoinConfiguration.newlines(), List.of(
+                    Component.text("===Emotes in " + set.prefix() + "===").style(Style.style(TextDecoration.BOLD)),
+                    p.getKey(),
+                    backButton.appendSpace().append(nextButton)
+
+            ));
+        } else {
+            return Component.text("Invalid page.").color(NamedTextColor.RED);
+        }
+    }
+
 
     int unicodeListing(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         final EmojiSubGroup group = ctx.getArgument("group", EmojiSubGroup.class);

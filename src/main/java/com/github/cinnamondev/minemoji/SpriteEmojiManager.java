@@ -1,15 +1,12 @@
 package com.github.cinnamondev.minemoji;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 import github.scarsz.discordsrv.dependencies.commons.lang3.StringUtils;
-import github.scarsz.discordsrv.dependencies.emoji.Emoji;
 import net.fellbaum.jemoji.EmojiManager;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ObjectComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
-import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.object.SpriteObjectContents;
 
 import java.io.File;
@@ -20,7 +17,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;

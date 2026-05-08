@@ -9,7 +9,6 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.papermc.paper.command.brigadier.MessageComponentSerializer;
 import io.papermc.paper.command.brigadier.argument.CustomArgumentType;
-import net.fellbaum.jemoji.EmojiGroup;
 import net.fellbaum.jemoji.EmojiSubGroup;
 import net.kyori.adventure.text.Component;
 

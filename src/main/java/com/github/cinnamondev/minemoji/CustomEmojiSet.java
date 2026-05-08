@@ -1,17 +1,9 @@
 package com.github.cinnamondev.minemoji;
 
-import net.fellbaum.jemoji.Emoji;
 import net.kyori.adventure.key.Key;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.ObjectComponent;
-import net.kyori.adventure.text.object.ObjectContents;
-import org.apache.commons.collections4.BidiMap;
-import org.bukkit.NamespacedKey;
 import org.jetbrains.annotations.Nullable;
-
 import java.net.URI;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 public class CustomEmojiSet implements EmojiSet {
@@ -54,5 +46,4 @@ public class CustomEmojiSet implements EmojiSet {
                 .filter(meta -> meta.key().value().equalsIgnoreCase(key.value()))
                 .findFirst();
     }
-
 }

@@ -3,16 +3,15 @@ package com.github.cinnamondev.minemoji;
 import com.github.cinnamondev.minemoji.Command.Command;
 import github.scarsz.discordsrv.DiscordSRV;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import net.kyori.adventure.text.Component;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -27,6 +26,9 @@ public final class Minemoji extends JavaPlugin {
     }
     @Override
     public void onEnable() {
+        getComponentLogger().info(Component.translatable("commands.generic.player_only"));
+        getServer().sendMessage(Component.translatable("commands.generic.player_only"));
+        getServer().sendMessage(Component.translatable("commands.give.success.single"));
         saveDefaultConfig();
 
         load().whenComplete((_v, ex) -> {

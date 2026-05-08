@@ -1,11 +1,7 @@
 package com.github.cinnamondev.minemoji;
 
-import github.scarsz.discordsrv.DiscordSRV;
 import github.scarsz.discordsrv.api.Subscribe;
 import github.scarsz.discordsrv.api.events.*;
-import github.scarsz.discordsrv.dependencies.jda.api.MessageBuilder;
-import github.scarsz.discordsrv.dependencies.jda.api.entities.Message;
-import github.scarsz.discordsrv.util.WebhookUtil;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.Component;
@@ -33,18 +29,6 @@ public class DiscordIntegration {
                 .deserialize(jsonComponent);
     }
 
-
-    //@Subscribe
-    //public void onMessageSent(DiscordGuildMessagePreBroadcastEvent e) {
-    //    if (!p.getConfig().getBoolean("use-discord-srv-hack", false)) {
-    //        e.setMessage(toShaded(
-    //                p.getEmoteManager().emojize(fromShaded(e.getMessage()))
-    //        ));
-    //    }
-    //    // This is janky,, we are stopping discordsrv from broadcasting so we can do it instead. prevents weirdness with
-    //    // components
-    //}
-
     @Subscribe
     public void emojizeDiscordMessage(DiscordGuildMessagePostProcessEvent e) {
         if (!p.getConfig().getBoolean("discord.disable-override", false)) {
@@ -58,19 +42,6 @@ public class DiscordIntegration {
             ));
         }
     }
-    ///  Text replacer that replaces prefixed emotes :identifier--sprite: with their corresponding emoji
-    ///  (has to search rather than map lookup)
-    //private final TextReplacementConfig PREFIXED_EMOTE_REPLACER = TextReplacementConfig.builder()
-    //        .match(Pattern.compile(":[a-zA-Z0-9_]*--([a-zA-Z0-9_~]*):"))
-    //        .replacement((result, b) -> Component.text(result.group(1)))
-    //        .build();
-    //@Subscribe
-    //public void onMessageReceived(GameChatMessagePreProcessEvent e) {
-    //    Component demojized = p.getEmoteManager().demojize(fromShaded(e.getMessageComponent()), true);
-    //    //demojized = demojized.replaceText(PREFIXED_EMOTE_REPLACER); //  MAKE QUADRUPLE SURE!
-//
-    //    e.setMessageComponent(toShaded(demojized));
-    //}
 
     @Subscribe
     public void demojizeMinecraftMessage(GameChatMessagePostProcessEvent e) {
@@ -91,7 +62,5 @@ public class DiscordIntegration {
                     .orElse(mr.group());
         });
         e.setProcessedMessage(message);
-        //DiscordSRV.api.
-        //p.getLogger().info(e.getProcessedMessage());
     }
 }

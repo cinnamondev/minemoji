@@ -3,11 +3,9 @@ package com.github.cinnamondev.minemoji;
 import net.fellbaum.jemoji.Emoji;
 import net.fellbaum.jemoji.EmojiManager;
 import net.kyori.adventure.key.Key;
-import net.kyori.adventure.text.ObjectComponent;
 import org.apache.commons.collections4.BidiMap;
 import org.apache.commons.collections4.bidimap.DualHashBidiMap;
 import org.apache.commons.lang3.StringUtils;
-import org.bukkit.NamespacedKey;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
@@ -27,6 +25,7 @@ public class UnicodeEmojiSet implements EmojiSet {
 
     private static Map<String,Emoji> createEmojiMap() {
         return EmojiManager.getAllEmojis().stream()
+                .filter(emoji -> !emoji.getDiscordAliases().isEmpty())
                 .collect(Collectors.toMap(e ->
                                 StringUtils.joinWith("-", e.getHtmlHexadecimalCode().replace("&#x", "")
                                                 .split(";"))
@@ -56,7 +55,7 @@ public class UnicodeEmojiSet implements EmojiSet {
 
     @Override
     public List<SpriteMeta> allEmotes() {
-        return EmojiManager.getAllEmojis().stream().map(this::findByEmote).toList();
+        return emojiTable.values().stream().map(this::findByEmote).toList();
     }
 
     @Override
