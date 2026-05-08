@@ -8,6 +8,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ObjectComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
 import net.kyori.adventure.text.object.SpriteObjectContents;
+import org.bstats.charts.DrilldownPie;
+import org.bstats.charts.SimplePie;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -25,7 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class SpriteEmojiManager {
-    private static final String DEFAULT_UNICODE_PACK = "https://cinnamondev.github.io/minemoji/packs/twemoji-latest.zip";
+    private static final String DEFAULT_UNICODE_PACK = "https://itscinnamon.dev/minemoji/packs/twemoji-latest.zip";
     private Minemoji p = null;
 
     public UnicodeEmojiSet unicodeEmojiSet = null;
@@ -98,6 +100,13 @@ public class SpriteEmojiManager {
 
     public SpriteEmojiManager(Minemoji p, Map<String, CustomEmojiSet> customEmotes) {
         this.p = p;
+        p.getBStats().addCustomChart(new DrilldownPie("n_custom_packs", () -> {
+            Map<String, Map<String, Integer>> data = new HashMap<>();
+            int vagueRange = (customEmotes.size() / 3);
+            int vagueRangeUpper = vagueRange + 3;
+            data.put(vagueRange + "-" + vagueRangeUpper, Map.of(Integer.toString(customEmotes.size()),1));
+            return data;
+        }));
         this.customEmoteMap.putAll(customEmotes);
         if (p.getConfig().getBoolean("unicode-emojis.enabled", true)) {
             String uriString = p.getConfig().getString("unicode-emojis.uri");
@@ -105,14 +114,19 @@ public class SpriteEmojiManager {
                 try {
                     URI packURI = URI.create(uriString);
                     unicodeEmojiSet = new UnicodeEmojiSet(packURI);
+                    p.getBStats().addCustomChart(new SimplePie("used_twemoji_pack",
+                            () -> uriString.equalsIgnoreCase(DEFAULT_UNICODE_PACK) ? "Default Twemoji" : uriString)
+                    );
                 } catch (IllegalArgumentException e) {
                     p.getLogger().info("Invalid URI. Unicode will not be created.");
                 }
             } else {
                 p.getLogger().info("No uri provided for Unicode. Your emotes should be bundled in another resource pack!");
+                p.getBStats().addCustomChart(new SimplePie("used_twemoji_pack", () -> "Unknown"));
                 unicodeEmojiSet = new UnicodeEmojiSet(null);
             }
-
+        } else {
+            p.getBStats().addCustomChart(new SimplePie("used_twemoji_pack", () -> "Disabled"));
         }
     }
 

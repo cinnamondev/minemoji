@@ -4,6 +4,7 @@ import com.github.cinnamondev.minemoji.Command.Command;
 import github.scarsz.discordsrv.DiscordSRV;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.kyori.adventure.text.Component;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.net.URI;
@@ -21,16 +22,16 @@ public final class Minemoji extends JavaPlugin {
     private RequestPacks packListener = null;
     private DiscordIntegration discordIntegration = null;
     private SpriteEmojiManager manager = null;
+    private static final int BSTATS_PLUGIN_ID = 31205;
+    private Metrics bStats;
+    public Metrics getBStats() { return bStats; }
     public SpriteEmojiManager getEmoteManager() {
         return manager;
     }
     @Override
     public void onEnable() {
-        getComponentLogger().info(Component.translatable("commands.generic.player_only"));
-        getServer().sendMessage(Component.translatable("commands.generic.player_only"));
-        getServer().sendMessage(Component.translatable("commands.give.success.single"));
+        this.bStats = new Metrics(this, BSTATS_PLUGIN_ID);
         saveDefaultConfig();
-
         load().whenComplete((_v, ex) -> {
             if (ex == null) {
                 getServer().getPluginManager().registerEvents(new EmojiRenderer(this), this);
