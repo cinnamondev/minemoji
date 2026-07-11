@@ -38,6 +38,12 @@ The uri specified in `unicode-emojis` should point to a resource pack, however.
 
 Make emote resource packs + json files out of input directories. Example command:
 
+### Github Pages
+
+Refer to https://github.com/cinnamondev/minemoji-template-pack to find out how to easily make a custom emote pack hosted via github pages.
+
+### Manual
+
 ```
 java -cp minemoji.jar com.github.cinnamondev.minemoji.PackMaker.PackMaker 
   --input-directory ./sample_pack/
@@ -64,6 +70,9 @@ emotes, i.e.: `ralsei_spin.gif` and `ralsei_spin.gif.info`, you can change:
   - i.e: `trans_bee.png.info` containing `1031671707762688060`
   - `ralsei_spin.gif.info` containing `a1427385442843758682`
 
+# discord
+
+[Discord](https://discord.gg/RwDPx56YvQ)
 # license
 
 licensed under apache 2.0 license
