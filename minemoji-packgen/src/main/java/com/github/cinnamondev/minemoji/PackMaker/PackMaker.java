@@ -1,6 +1,6 @@
 package com.github.cinnamondev.minemoji.PackMaker;
 
-import com.github.cinnamondev.minemoji.CustomEmojiSet;
+import com.github.cinnamondev.common.CustomEmojiSet;
 import com.google.gson.Gson;
 import org.apache.batik.transcoder.TranscoderException;
 import org.apache.batik.transcoder.TranscoderInput;
@@ -8,7 +8,6 @@ import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.jetbrains.annotations.NotNull;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -152,7 +151,7 @@ public class PackMaker {
 
     public record FileInfo(int maxFramerate, boolean isAnimated, long snowflake) {
         public boolean isNonStandard() { return maxFramerate != -1 || !isAnimated || snowflake != -1; }
-        public static FileInfo fromFile(@NotNull File file) throws IOException {
+        public static FileInfo fromFile(File file) throws IOException {
             if (!file.exists() || !file.isFile()) {
                 System.out.println("no info file present for image. using defaults");
                 return new FileInfo(-1, false, -1);

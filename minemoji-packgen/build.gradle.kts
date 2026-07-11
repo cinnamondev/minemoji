@@ -13,6 +13,8 @@ repositories {
 }
 
 dependencies {
+    implementation("net.kyori:adventure-api:4.26.1")
+
     implementation("com.google.code.gson:gson:2.14.0")
     implementation("com.twelvemonkeys.imageio:imageio-webp:3.13.1")
     implementation("org.apache.xmlgraphics:batik-transcoder:1.19")
