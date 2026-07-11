@@ -1,5 +1,6 @@
 package com.github.cinnamondev.minemoji;
 
+import com.github.cinnamondev.common.*;
 import github.scarsz.discordsrv.api.Subscribe;
 import github.scarsz.discordsrv.api.events.*;
 import net.kyori.adventure.key.Key;

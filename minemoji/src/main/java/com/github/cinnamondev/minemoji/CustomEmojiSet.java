@@ -1,17 +1,20 @@
 package com.github.cinnamondev.minemoji;
 
+import com.github.cinnamondev.common.EmojiSet;
 import net.kyori.adventure.key.Key;
 import org.jetbrains.annotations.Nullable;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
+
 public class CustomEmojiSet implements EmojiSet {
+
     public String prefix;
     public int packVersion;
     public URI url;
     public boolean serveToClient;
-    public List<SpriteMeta> emojis;
+    public List<EmojiSet.SpriteMeta> emojis;
 
     @Override
     public String prefix() {
@@ -29,12 +32,12 @@ public class CustomEmojiSet implements EmojiSet {
     }
 
     @Override
-    public List<SpriteMeta> allEmotes() {
+    public List<EmojiSet.SpriteMeta> allEmotes() {
         return emojis;
     }
 
     @Override
-    public Optional<SpriteMeta> tryFindByText(String emoteText) {
+    public Optional<EmojiSet.SpriteMeta> tryFindByText(String emoteText) {
         return emojis.stream()
                 .filter(meta -> meta.emojiText.equalsIgnoreCase(emoteText))
                 .findFirst();

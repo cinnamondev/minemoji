@@ -13,3 +13,6 @@ join-prompt: "This server uses resource pack to allow players to use emotes in g
 
 discord: # Default behaviour is to override discordsrv sending messages.
   disable-override: false
+
+check-colored-chat-messages: false # keeping this as defaulting to off to protect from potential issues/conflicts. use if
+# you have coloured/gradient chats.

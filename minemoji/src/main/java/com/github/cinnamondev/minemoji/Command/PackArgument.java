@@ -1,6 +1,6 @@
 package com.github.cinnamondev.minemoji.Command;
 
-import com.github.cinnamondev.minemoji.EmojiSet;
+import com.github.cinnamondev.common.EmojiSet;
 import com.github.cinnamondev.minemoji.Minemoji;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;

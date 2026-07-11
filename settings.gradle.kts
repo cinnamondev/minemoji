@@ -6,3 +6,5 @@ pluginManagement {
 }
 
 rootProject.name = "minemoji"
+
+include("minemoji", "minemoji-packgen", "common")

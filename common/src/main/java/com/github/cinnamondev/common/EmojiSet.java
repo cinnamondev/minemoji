@@ -1,4 +1,4 @@
-package com.github.cinnamondev.minemoji;
+package com.github.cinnamondev.common;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
@@ -38,7 +38,7 @@ public interface EmojiSet {
         public String resource;
         //public String[] aliases;
 
-        Key key() {
+        public Key key() {
             return Key.key(resource);
         }
 

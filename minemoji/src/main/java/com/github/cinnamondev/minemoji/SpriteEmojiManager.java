@@ -1,12 +1,16 @@
 package com.github.cinnamondev.minemoji;
 
+import com.github.cinnamondev.common.EmojiSet;
+import com.github.cinnamondev.common.UnicodeEmojiSet;
 import com.google.gson.Gson;
 import github.scarsz.discordsrv.dependencies.commons.lang3.StringUtils;
 import net.fellbaum.jemoji.EmojiManager;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ObjectComponent;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.TextReplacementConfig;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.object.SpriteObjectContents;
 import org.bstats.charts.DrilldownPie;
 import org.bstats.charts.SimplePie;
@@ -29,7 +33,7 @@ import java.util.stream.Stream;
 public class SpriteEmojiManager {
     private static final String DEFAULT_UNICODE_PACK = "https://itscinnamon.dev/minemoji/packs/twemoji-latest.zip";
     private Minemoji p = null;
-
+    private boolean scanChildrenAsWholes = false;
     public UnicodeEmojiSet unicodeEmojiSet = null;
 
     public static CompletableFuture<Map<String, CustomEmojiSet>> downloadPacks(Minemoji p, List<URI> packs) {
@@ -100,6 +104,7 @@ public class SpriteEmojiManager {
 
     public SpriteEmojiManager(Minemoji p, Map<String, CustomEmojiSet> customEmotes) {
         this.p = p;
+        scanChildrenAsWholes = p.getConfig().getBoolean("check-colored-chat-messages", false);
         p.getBStats().addCustomChart(new DrilldownPie("n_custom_packs", () -> {
             Map<String, Map<String, Integer>> data = new HashMap<>();
             int vagueRange = (customEmotes.size() / 3);
@@ -183,10 +188,90 @@ public class SpriteEmojiManager {
                     .orElse(Component.text(result.group()))
             ).build();
 
+    public Component walkComponent(Component component) {
+        Component root = component;
+        List<Component> children = component.children();
+        ArrayList<Component> processedChildren = new ArrayList<>();
+
+        boolean foundStart = false;
+        ArrayList<TextComponent> colonWindow = new ArrayList<>(); // first and final element will be : with text between.
+        for (Component child : children) {
+            if (!(child instanceof TextComponent tc)) {
+                processedChildren.add(child);
+                continue;
+            }
+            String content = tc.content(); // content May NOT be one character, we need to explore this first.
+
+
+            int index = content.indexOf(':');
+            if (index < 0) { // no : is found!
+                if (!foundStart) {
+                    // havent found start of an emote, dump back into processed.
+                    processedChildren.add(tc);
+                } else {
+                    colonWindow.add(tc); // have found part of emote already, just dump into window while we open the
+                    // screen.
+                }
+            } else { // we have found : in it.
+                Style existingStyle = tc.style();
+                if (foundStart) {
+                    // we already found the start before, so... this is the end bit
+                    TextComponent partialComponent = Component.text(content.substring(0, index + 1)).style(existingStyle);
+                    colonWindow.add(partialComponent);
+                    Component unprocessed = flattenColouredComponents(colonWindow);
+                    Component potentialEmote = emojize(unprocessed);
+                    if (potentialEmote instanceof ObjectComponent oc) {
+                        processedChildren.add(oc);
+                    } else {
+                        processedChildren.add(tc);
+                    }
+                    foundStart = false;
+                    colonWindow = new ArrayList<>();
+                    // now for the other part.
+                    String partial = content.substring(index + 1);
+                    if (!partial.isEmpty()) {
+                        processedChildren.add(Component.text(partial).style(existingStyle));
+                    }
+                } else {
+                    if (index != 0) {
+                        TextComponent partialComponent = Component.text(content.substring(0, index)).style(existingStyle);
+                        processedChildren.add(partialComponent);
+                    }
+
+                    int secondColonCheck = content.indexOf(':', index + 1);
+                    if (secondColonCheck != -1 && secondColonCheck != index) {
+                        processedChildren.add(tc);
+                        // we know that this will be dealt with by the regular checkers as its own component. avoid
+                        // double work where we can (even though this hack DOES cause double work. GRAH.)
+                    } else {
+                        TextComponent partialComponent = Component.text(content.substring(index)).style(existingStyle);
+                        colonWindow.add(partialComponent);
+                        foundStart = true;
+                    }
+                }
+            }
+        }
+
+        if (foundStart) {
+            processedChildren.addAll(colonWindow); // at this point we have gone through all and never reset foundstart
+            // so theres no emote. give up here.
+        }
+        return root.children(processedChildren);
+    }
+
+    private Component flattenColouredComponents(ArrayList<TextComponent> tcList) {
+        String content = tcList.stream().map(TextComponent::content).collect(Collectors.joining());
+        return Component.text(content);
+    }
+
     public Component emojize(Component component) {
-        Component firstStage = unicodeEmojiSet != null
-                ? component.replaceText(UNICODE_REPLACER)
+        Component prescanned = scanChildrenAsWholes
+                ? walkComponent(component)
                 : component;
+
+        Component firstStage = unicodeEmojiSet != null
+                ? prescanned.replaceText(UNICODE_REPLACER)
+                : prescanned;
 
         return firstStage
                 .replaceText(PREFIXED_EMOTE_REPLACER)

@@ -1,4 +1,4 @@
-package com.github.cinnamondev.minemoji;
+package com.github.cinnamondev.common;
 
 import net.fellbaum.jemoji.Emoji;
 import net.fellbaum.jemoji.EmojiManager;

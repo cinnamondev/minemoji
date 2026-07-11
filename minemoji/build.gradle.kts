@@ -16,6 +16,7 @@ repositories {
         name = "papermc-repo"
         url = uri("https://repo.papermc.io/repository/maven-public/")
     }
+    maven { url = uri("https://repo.essentialsx.net/releases") }
     maven { url = uri("https://nexus.scarsz.me/content/groups/public/") }
     maven { url = uri("https://repo1.maven.org/maven2/") }
 
@@ -25,20 +26,18 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.1.2.build.+")
     compileOnly("com.discordsrv:discordsrv:1.30.5")
-    implementation("net.fellbaum:jemoji:1.7.6")
     implementation("org.apache.commons:commons-collections4:4.5.0")
-    // Requirements for PackMaker (this is probably where the bulk of the Jar file comes from)
+    implementation("net.fellbaum:jemoji:1.7.6")
     implementation("com.google.code.gson:gson:2.14.0")
-    implementation("com.twelvemonkeys.imageio:imageio-webp:3.13.1")
-    implementation("org.apache.xmlgraphics:batik-transcoder:1.19")
-    implementation("org.apache.xmlgraphics:batik-codec:1.19")
-    implementation("commons-cli:commons-cli:1.10.0")
-    implementation("org.apache.commons:commons-lang3:3.20.0")
     implementation("org.bstats:bstats-bukkit:3.2.1")
+    implementation(project(":common"))
+    if (project.hasProperty("full")) {
+        implementation(project(":minemoji-packgen"))
+    }
 }
 
 group = "com.github.cinnamondev"
-version = "1.4"
+version = "1.5"
 description = "Bringing emotes to minecraft!"
 
 java {
@@ -70,6 +69,9 @@ tasks {
         downloadPlugins {
             modrinth("discordsrv", "1.30.5") //  for discordsrv integration testing.
             modrinth("luckperms", "v5.5.17-bukkit")
+            modrinth("essentialsx", "2.22.0")
+            modrinth("essentialsx-chat-module", "2.22.0")
+            modrinth("chatcolors", "2026.7.1")
         }
         runDirectory.set(layout.buildDirectory.dir("run"))
         minecraftVersion("26.1.2")
@@ -84,6 +86,10 @@ paperPluginYaml {
     authors.add("cinnamondev")
     dependencies {
         server("DiscordSRV", PaperPluginYaml.Load.BEFORE, false)
+        server("Essentials", PaperPluginYaml.Load.BEFORE, false)
+        server("EssentialsChat", PaperPluginYaml.Load.BEFORE, false)
+        server("ChatColor", PaperPluginYaml.Load.BEFORE, false)
+
     }
     permissions {
         register("minemoji.emoji") {

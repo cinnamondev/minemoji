@@ -1,9 +1,9 @@
 package com.github.cinnamondev.minemoji;
 
+import com.github.cinnamondev.common.EmojiSet;
 import com.github.cinnamondev.minemoji.Command.Command;
 import github.scarsz.discordsrv.DiscordSRV;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
-import net.kyori.adventure.text.Component;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -32,9 +32,9 @@ public final class Minemoji extends JavaPlugin {
     public void onEnable() {
         this.bStats = new Metrics(this, BSTATS_PLUGIN_ID);
         saveDefaultConfig();
+        getServer().getPluginManager().registerEvents(new EmojiRenderer(this), this);
         load().whenComplete((_v, ex) -> {
             if (ex == null) {
-                getServer().getPluginManager().registerEvents(new EmojiRenderer(this), this);
                 if (getServer().getPluginManager().isPluginEnabled("DiscordSRV")) {
                     this.discordIntegration = new DiscordIntegration(this);
                     DiscordSRV.api.subscribe(this.discordIntegration);

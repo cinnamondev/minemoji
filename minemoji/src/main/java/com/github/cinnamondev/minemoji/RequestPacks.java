@@ -1,6 +1,8 @@
 package com.github.cinnamondev.minemoji;
 
 import com.destroystokyo.paper.event.player.PlayerConnectionCloseEvent;
+import com.github.cinnamondev.common.EmojiSet;
+import com.github.cinnamondev.common.UnicodeEmojiSet;
 import io.papermc.paper.event.connection.configuration.AsyncPlayerConnectionConfigureEvent;
 import net.kyori.adventure.resource.ResourcePackCallback;
 import net.kyori.adventure.resource.ResourcePackInfo;

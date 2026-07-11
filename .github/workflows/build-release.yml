@@ -22,9 +22,13 @@ jobs:
         - name: Build with Gradle
           run: gradle build
         - name: Rename relase
-          run: mv ./build/libs/minemoji-*-all.jar ./minemoji.jar
+          run: mv ./minemoji/build/libs/minemoji-*-all.jar ./minemoji-minimal.jar
+        - name: Build full gradle
+          run: gradle build -Pfull
+        - name: Rename minimal
+          run: mv ./minemoji/build/libs/minemoji-*-all.jar ./minemoji.jar
         - name: Release
           uses: softprops/action-gh-release@v2
           with:
-            files: minemoji.jar
+            files: minemoji.jar\nminemoji-minimal.jar
     
